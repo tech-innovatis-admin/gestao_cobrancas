@@ -104,24 +104,36 @@
   @apply inline-flex max-w-full items-center truncate rounded border px-1.5 py-px text-[11px] font-medium leading-4;
 }
 
-@utility b-neutral {
-  @apply bg-canvas text-ink-muted border-line;
-}
+/*
+  As classes de tom do badge (b-*) são montadas dinamicamente em badge.tsx via
+  `b-${tom}` (template literal) e por isso NUNCA aparecem como texto literal em
+  nenhum .ts/.tsx. O scanner de conteúdo do Tailwind v4 só descobre classes
+  registradas via `@utility` quando encontra o nome literal em algum arquivo
+  escaneado — como isso nunca acontece aqui, elas ficariam sujeitas a
+  tree-shaking e seriam removidas do CSS compilado. Por isso ficam como
+  seletores CSS simples dentro de `@layer components`, que o Tailwind v4 NÃO
+  submete a content-scanning/tree-shaking (mesmo comportamento do v3).
+*/
+@layer components {
+  .b-neutral {
+    @apply bg-canvas text-ink-muted border-line;
+  }
 
-@utility b-green {
-  @apply bg-ok-soft text-ok border-ok/20;
-}
+  .b-green {
+    @apply bg-ok-soft text-ok border-ok/20;
+  }
 
-@utility b-blue {
-  @apply bg-info-soft text-info border-info/20;
-}
+  .b-blue {
+    @apply bg-info-soft text-info border-info/20;
+  }
 
-@utility b-red {
-  @apply bg-danger-soft text-danger border-danger/20;
-}
+  .b-red {
+    @apply bg-danger-soft text-danger border-danger/20;
+  }
 
-@utility b-orange {
-  @apply bg-warn-soft text-warn border-warn/20;
+  .b-orange {
+    @apply bg-warn-soft text-warn border-warn/20;
+  }
 }
 
 @layer base { body { @apply bg-canvas text-ink antialiased; } .num { font-variant-numeric: tabular-nums; } }
