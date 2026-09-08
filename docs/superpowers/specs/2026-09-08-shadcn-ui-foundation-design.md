@@ -6,6 +6,10 @@ O projeto (INNOVATIS | Gestão de Cobranças) usa hoje um sistema de UI próprio
 
 Dado o tamanho do escopo (o app inteiro), este documento cobre só o **primeiro sub-projeto**: a fundação do shadcn (instalação, configuração, componentes base) mais a migração da tela de **Login/Autenticação** como prova de conceito. As demais áreas (Cobranças, Visão Geral, Auditoria) são sub-projetos futuros, cada um com seu próprio design/plano quando chegar a vez.
 
+**Atualização pós-tentativa de implementação:** a primeira tentativa de rodar a Task 1 (init do shadcn) revelou que a versão atual da CLI do shadcn (`v4.21`) gera tema no formato Tailwind v4 (CSS-first, `@theme` em `globals.css`), incompatível com o Tailwind v3.4 deste projeto — quebra o build (`bg-background` classe não existe). Decisão do usuário: **atualizar o projeto pra Tailwind v4** em vez de forçar uma versão antiga da CLI ou uma configuração híbrida manual, pra ficar no caminho "padrão" de verdade da ferramenta. Isso adiciona uma task de upgrade do Tailwind antes da instalação do shadcn (ver plano).
+
+Segunda decisão relacionada: a CLI hoje usa **Base UI** como biblioteca de primitivos por padrão (em vez de Radix UI, que era o padrão até pouco tempo atrás e o que este documento assumia originalmente). Base UI e a versão do Tailwind são eixos independentes — daria pra combinar Tailwind v4 com Radix (`-b radix`) — mas a decisão foi ficar com **Base UI**, por ser o padrão atual da ferramenta e a direção que ela está tomando.
+
 ## Decisões
 
 ### 1. Visual: shadcn padrão, sem re-temar
@@ -35,7 +39,7 @@ O projeto já tem `class-variance-authority`, `clsx`, `tailwind-merge` e `lucide
 Instalados via CLI do shadcn (cada um vira um arquivo em `src/components/ui/`):
 `button`, `input`, `select`, `textarea`, `label`, `badge` (com variantes extra — ver decisão 1), `dialog` (substitui `modal.tsx`), `sheet` (substitui `drawer.tsx`), `tabs`, `table`, `skeleton`, `alert` (substitui o `<Erro/>` atual em `basicos.tsx`, mesma API — prop `msg` opcional), `form` (integração com react-hook-form).
 
-Novas dependências: `@radix-ui/react-*` (primitivos acessíveis por trás de cada componente), `react-hook-form`, `@hookform/resolvers`.
+Novas dependências: `@base-ui-components/react` (primitivos acessíveis por trás de cada componente — ver atualização no topo do documento), `react-hook-form`, `@hookform/resolvers`, `tailwindcss@4`/`@tailwindcss/postcss` (upgrade do Tailwind, pré-requisito).
 
 ### 5. Escopo deste sub-projeto
 

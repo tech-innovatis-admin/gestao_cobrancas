@@ -2,31 +2,103 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Instalar o shadcn/ui neste projeto (visual padrão, sem re-temar), com uma variante de Badge que preserva o código de cores de negócio, e migrar a tela de Login + Alterar Senha para os novos componentes com react-hook-form + zod (schemas compartilhados com os Server Actions).
+**Goal:** Instalar o shadcn/ui neste projeto (visual padrão, sem re-temar, base Base UI), com uma variante de Badge que preserva o código de cores de negócio, e migrar a tela de Login + Alterar Senha para os novos componentes com react-hook-form + zod (schemas compartilhados com os Server Actions).
 
 **Architecture:** O CLI do shadcn gera componentes direto em `src/components/ui/*.tsx` — a mesma pasta que os componentes atuais já ocupam. Nada na estrutura de imports do resto do app muda (`@/components/ui/button` etc. continuam existindo, só o conteúdo interno muda). Ver design completo em `docs/superpowers/specs/2026-09-08-shadcn-ui-foundation-design.md`.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, Tailwind CSS 3.4, shadcn/ui (CLI v4, base Radix), react-hook-form, @hookform/resolvers/zod, zod (já presente).
+**Tech Stack:** Next.js 15 (App Router), React 19, Tailwind CSS 4 (upgrade de v3.4 — Task 1), shadcn/ui (CLI v4, base Base UI), react-hook-form, @hookform/resolvers/zod, zod (já presente).
 
 ---
 
 ## Pré-requisitos confirmados nesta sessão
 
 - `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react` já são dependências do projeto — compatíveis com o que o shadcn usa por baixo.
-- CLI do shadcn instalado é a v4.21 (`npx shadcn@latest`) — usa `--defaults`/`--preset` em vez do antigo `--base-color`. Comando de init verificado: `npx shadcn@latest init --yes --defaults`.
+- **Tentativa anterior desta task falhou e foi revertida:** rodar `npx shadcn@latest init --yes --defaults` direto sobre o Tailwind v3.4 do projeto quebrou o build (`bg-background` classe não existe) — a CLI atual do shadcn gera tema no formato Tailwind v4 (CSS-first, `@theme` em `globals.css`), incompatível com a v3. Decisão: fazer o upgrade do Tailwind pra v4 primeiro (Task 1 abaixo), em vez de forçar uma versão antiga da CLI ou uma config híbrida manual.
+- CLI do shadcn instalada é a v4.21 (`npx shadcn@latest`) — usa `--defaults`/`--preset` em vez do antigo `--base-color`, e usa **Base UI** (`@base-ui-components/react`) como biblioteca de primitivos por padrão, não mais Radix UI. Decisão do usuário: manter Base UI (padrão atual da ferramenta).
 - `loginAction`/`alterarSenhaAction` (`src/services/authActions.ts`) seguem a convenção `(prevState, FormData) => FormState`, feitas pra `useActionState` + `<form action={...}>`. Para integrar com react-hook-form mantendo essa mesma função de servidor sem reescrevê-la, o padrão adotado é: manter `useActionState` (pra pending/erro), mas trocar o `<form action={formAction}>` por `<form onSubmit={form.handleSubmit(onValid)}>`, onde `onValid` monta um `FormData` a partir dos dados validados pelo react-hook-form e chama `formAction(fd)` programaticamente. Isso sacrifica o fallback sem-JS (aceitável — é uma ferramenta interna atrás de login, não uma página pública), mas mantém a Server Action e o estado de erro exatamente como estão.
 
 ---
 
-## Task 1: Inicializar shadcn/ui e instalar componentes base
+## Task 1: Atualizar Tailwind CSS de v3 para v4
+
+**Files:**
+- Modify: `postcss.config.mjs`, `tailwind.config.ts` (pode ser drasticamente reduzido ou removido — v4 usa `@theme` no CSS), `src/app/globals.css`, `package.json`
+
+**Contexto:** pré-requisito descoberto na primeira tentativa desta implementação (ver "Pré-requisitos" acima). O shadcn/ui hoje gera tema no formato Tailwind v4; o projeto precisa estar na v4 antes de rodar o CLI do shadcn.
+
+- [ ] **Passo 1: Confirmar worktree limpo antes de rodar a ferramenta de upgrade**
+
+```bash
+git status
+```
+
+Deve estar limpo (sem mudanças pendentes) — a ferramenta do Passo 2 modifica arquivos automaticamente, e você vai precisar revisar o diff depois.
+
+- [ ] **Passo 2: Rodar a ferramenta oficial de upgrade do Tailwind**
+
+```bash
+npx @tailwindcss/upgrade
+```
+
+Essa ferramenta automatiza a maior parte da migração v3→v4: atualiza `package.json` (troca `tailwindcss` pra v4, adiciona `@tailwindcss/postcss`, remove `autoprefixer` se não for mais necessário), atualiza `postcss.config.mjs`, e migra os tokens customizados de `tailwind.config.ts` (`navy`, `canvas`, `ink`, `action`, `ok`, `info`, `danger`, `warn`, `borderRadius`, `boxShadow`) pra um bloco `@theme` em `globals.css`.
+
+- [ ] **Passo 3: Revisar o diff gerado linha por linha**
+
+```bash
+git diff --stat
+git diff tailwind.config.ts src/app/globals.css postcss.config.mjs package.json
+```
+
+Confirme especificamente que os tokens de cor customizados (`navy`, `canvas`, `ink`, `action`, `ok`/`info`/`danger`/`warn`, e os valores de `borderRadius`/`boxShadow`) foram migrados corretamente pro bloco `@theme` — compare os valores hex/nome com o `tailwind.config.ts` original (mostrado como remoção no diff). Se algum token sumiu ou o valor mudou incorretamente, corrija manualmente adicionando a linha faltante no formato `--color-<nome>: <valor>;` (ou `--radius-<nome>`/`--shadow-<nome>` conforme o tipo de token) dentro do bloco `@theme`, antes de prosseguir.
+
+- [ ] **Passo 4: Confirmar que as classes customizadas continuam existindo**
+
+```bash
+grep -c "\.panel\|\.field\|\.tbl" src/app/globals.css
+```
+
+Deve continuar mostrando as mesmas ocorrências de antes do upgrade (essas classes ficam em `@layer components`, que a ferramenta de upgrade não deveria tocar) — se o número caiu, pare e investigue antes de continuar (não prossiga sobrescrevendo manualmente sem entender o que a ferramenta fez).
+
+- [ ] **Passo 5: Build e teste completo**
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+O build deve passar sem erro de "classe não existe" (era esse o erro da tentativa anterior: `bg-background` não resolvendo). Se der erro parecido pra qualquer token customizado (`bg-canvas`, `text-ink`, `border-line` etc.), o token não foi migrado corretamente pro `@theme` — adicione manualmente seguindo o Passo 3.
+
+- [ ] **Passo 6: Teste visual manual**
+
+```bash
+npm run dev
+```
+
+Abra `/login` e (logado como `admin@teste.local`/`Teste@123`) `/visao-geral`, `/cobrancas`, `/auditoria`. Nesta altura (antes de instalar qualquer componente shadcn), o app deve parecer **visualmente idêntico** ao que era antes — só a mecânica interna do Tailwind mudou, nada no visual deveria mudar ainda. Cores erradas, espaçamento quebrado ou classes não aplicadas indicam token mal migrado — volte ao Passo 3.
+
+- [ ] **Passo 7: Commit**
+
+```bash
+git status
+git add -A
+git commit -m "chore: atualiza Tailwind CSS de v3 para v4"
+```
+
+Confira `git status`/`git diff --stat` antes do `git add -A` — como a ferramenta de upgrade mexe em bastante coisa, confirme que não há nada inesperado (arquivos fora do escopo de CSS/Tailwind/build sendo tocados) antes de adicionar tudo.
+
+---
+
+## Task 2: Inicializar shadcn/ui e instalar componentes base
 
 **Files:**
 - Create: `components.json` (gerado pelo CLI)
-- Modify: `tailwind.config.ts`, `src/app/globals.css`, `package.json` (gerado/modificado pelo CLI)
+- Modify: `src/app/globals.css`, `package.json` (gerado/modificado pelo CLI)
 - Create: `src/lib/utils.ts` (gerado pelo CLI — **verificar se já existe** antes, ver Passo 1)
 - Create: `src/components/ui/{button,input,select,textarea,label,badge,dialog,sheet,tabs,table,skeleton,alert,form}.tsx` (gerados pelo CLI)
 
-O projeto já tem `src/lib/utils.ts` (com a função `cn`, usada em `basicos.tsx`) e já tem `button.tsx`/`badge.tsx`/`tabs.tsx`/`modal.tsx`/`drawer.tsx` em `src/components/ui/`. O CLI do shadcn vai tentar sobrescrever esses arquivos — isso é esperado e é o objetivo desta task (Passo 1 confirma antes de deixar sobrescrever).
+O projeto já tem `src/lib/utils.ts` (com a função `cn`, usada em `basicos.tsx`) e já tem `button.tsx`/`badge.tsx`/`tabs.tsx`/`modal.tsx`/`drawer.tsx` em `src/components/ui/`. O CLI do shadcn vai tentar sobrescrever esses arquivos — isso é esperado e é o objetivo desta task. Esta task só deve rodar DEPOIS da Task 1 (Tailwind v4 já instalado).
 
 - [ ] **Passo 1: Checar o que já existe antes de rodar o CLI**
 
@@ -35,7 +107,7 @@ cat src/lib/utils.ts
 ls src/components/ui/
 ```
 
-Se `src/lib/utils.ts` já exportar uma função `cn` baseada em `clsx`+`tailwind-merge` (é o que se espera, já que o projeto já usa essas libs), o CLI deve reconhecer e não duplicar — mas confirme lendo o arquivo antes de continuar, pra não haver surpresa.
+Se `src/lib/utils.ts` já exportar uma função `cn` baseada em `clsx`+`tailwind-merge`, o CLI deve reconhecer e não duplicar — mas confirme lendo o arquivo antes de continuar. (Na tentativa anterior — antes do upgrade do Tailwind — a CLI chegou a substituir esse arquivo por um re-export do pacote `cn` do npm; se isso acontecer de novo aqui, é um comportamento conhecido da CLI atual, não um bug — mantenha o re-export, mas confirme que `cn` continua funcionando via `npm run typecheck`.)
 
 - [ ] **Passo 2: Rodar o init do shadcn**
 
@@ -43,15 +115,15 @@ Se `src/lib/utils.ts` já exportar uma função `cn` baseada em `clsx`+`tailwind
 npx shadcn@latest init --yes --defaults
 ```
 
-Isso deve: criar/atualizar `components.json`, ajustar `tailwind.config.ts` (adiciona tokens de cor via CSS variables, `tailwindcss-animate` ou `tw-animate-css` no plugins), e adicionar variáveis de tema (`:root { --background: ...; --foreground: ...; }` etc.) em `src/app/globals.css`.
+Isso deve criar/atualizar `components.json` e ajustar `src/app/globals.css` (bloco de tema shadcn, agora compatível já que o projeto está em Tailwind v4 desde a Task 1).
 
-**Atenção:** o `globals.css` atual já tem `@layer base`/`@layer components` com classes customizadas (`.panel`, `.field`, `.badge`, `.tbl` etc., usadas pelo resto do app que ainda não foi migrado). O CLI **não deve remover** esse conteúdo (ele só adiciona as variáveis de tema shadcn no topo/`:root`) — confirme após rodar que essas classes continuam lá intactas:
+**Atenção:** o `globals.css` já tem `@layer base`/`@layer components` com classes customizadas (`.panel`, `.field`, `.badge`, `.tbl` etc.) e o bloco `@theme` migrado na Task 1. O CLI não deve remover esse conteúdo — confirme após rodar:
 
 ```bash
 grep -c "\.panel\|\.field\|\.tbl" src/app/globals.css
 ```
 
-Se o número for menor que antes do comando (era 1 ocorrência de `.panel` na definição + várias referências), **pare e reporte** — não prossiga sobrescrevendo manualmente, isso indica que o CLI removeu conteúdo que não deveria.
+Se o número for menor que antes do comando, **pare e reporte** — não prossiga sobrescrevendo manualmente.
 
 - [ ] **Passo 3: Instalar os componentes base**
 
@@ -59,36 +131,36 @@ Se o número for menor que antes do comando (era 1 ocorrência de `.panel` na de
 npx shadcn@latest add button input select textarea label badge dialog sheet tabs table skeleton alert form --yes --overwrite
 ```
 
-`--overwrite` é necessário pois `button.tsx`, `badge.tsx`, `tabs.tsx` já existem (versões customizadas atuais) — a sobrescrita é o objetivo. Isso também instala `react-hook-form`, `@hookform/resolvers`, e os pacotes `@radix-ui/react-*` necessários automaticamente (o componente `form` puxa `react-hook-form`+`@hookform/resolvers` como dependência).
+`--overwrite` é necessário pois `button.tsx`, `badge.tsx`, `tabs.tsx` já existem (versões customizadas atuais) — a sobrescrita é o objetivo. Isso também instala `react-hook-form`, `@hookform/resolvers`, e `@base-ui-components/react` automaticamente.
 
-- [ ] **Passo 4: Verificar que nada quebrou no resto do app** (que ainda usa os componentes antigos `modal.tsx`/`drawer.tsx`, não tocados nesta task, e as classes `.panel`/`.field`/`.tbl` do CSS)
+- [ ] **Passo 4: Verificar que nada quebrou no resto do app** (que ainda usa os componentes antigos `modal.tsx`/`drawer.tsx`, não tocados nesta task)
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-Isso vai gerar erros de tipo nos lugares que usavam a API antiga de `Button`/`Badge`/`Tabs` (props diferentes) — **isso é esperado nesta task**, já que só `login-form.tsx`/`alterar-senha` serão migrados agora; o resto do app ainda não foi. Se os erros forem exclusivamente sobre uso de `Button`/`Badge`/`Tabs` fora de `login-form.tsx`/`alterar-senha`/`page.tsx` de login, **isso é aceitável para esta task** — registre a lista de arquivos afetados no relatório final (serão corrigidos nas próximas tasks/sub-projetos, quando cada área migrar). Se houver erro em `src/lib/utils.ts` ou em `globals.css` não compilando, isso SIM precisa ser corrigido agora.
+Isso vai gerar erros de tipo nos lugares que usavam a API antiga de `Button`/`Badge`/`Tabs` (props diferentes) — **isso é esperado nesta task**, já que só `login-form.tsx`/`alterar-senha` serão migrados nas próximas tasks; o resto do app ainda não foi. Se os erros forem exclusivamente sobre uso de `Button`/`Badge`/`Tabs` fora de `login-form.tsx`/`alterar-senha/page.tsx`/`login/page.tsx`, isso é aceitável para esta task — liste os arquivos afetados no relatório final. Se houver erro em `src/lib/utils.ts` ou no bloco `@theme` de `globals.css`, isso precisa ser corrigido agora.
 
 - [ ] **Passo 5: Commit**
 
 ```bash
-git add components.json tailwind.config.ts src/app/globals.css src/lib/utils.ts src/components/ui/ package.json package-lock.json
+git add components.json src/app/globals.css src/lib/utils.ts src/components/ui/ package.json package-lock.json
 git commit -m "feat: inicializa shadcn/ui e instala componentes base"
 ```
 
-Não commitar ainda as mudanças em arquivos que dependem dos componentes antigos (esses serão corrigidos task por task, sub-projeto por sub-projeto) — se `git status` mostrar modificações inesperadas em outros arquivos além dos listados acima, pare e reporte antes de commitar.
+Não commitar mudanças em arquivos que dependem dos componentes antigos — se `git status` mostrar modificações inesperadas em outros arquivos além dos listados acima, pare e reporte antes de commitar.
 
 ---
 
-## Task 2: Badge com variantes de negócio (ok/danger/warn/info)
+## Task 3: Badge com variantes de negócio (ok/danger/warn/info)
 
 **Files:**
-- Modify: `src/components/ui/badge.tsx` (gerado na Task 1 — adicionar variantes)
+- Modify: `src/components/ui/badge.tsx` (gerado na Task 2 — adicionar variantes)
 
 **Contexto:** o `badge.tsx` gerado pelo shadcn usa CVA com variantes `default`/`secondary`/`destructive`/`outline`. Hoje o app tem badges coloridas com significado de negócio (`b-green`=pago/ok, `b-red`=alerta/perigo, `b-orange`=aviso, `b-blue`=info) definidas em `globals.css` e usadas via `<Badge tom="green">` (ver `src/components/ui/badges-dominio.tsx` e chamadas em `sincronizacoes.tsx` como `<Badge tom={r.status === "success" ? "green" : ...}>`). Adicionar variantes equivalentes ao componente shadcn preservando esse uso.
 
-- [ ] **Passo 1: Ler o badge.tsx gerado pela Task 1 pra saber a estrutura exata do CVA**
+- [ ] **Passo 1: Ler o badge.tsx gerado pela Task 2 pra saber a estrutura exata do CVA**
 
 ```bash
 cat src/components/ui/badge.tsx
@@ -113,7 +185,7 @@ npm run typecheck
 
 O tipo de `variant` do `Badge` (inferido via `VariantProps<typeof badgeVariants>`) deve agora aceitar `"ok" | "danger" | "warn" | "info"` além dos 4 originais — confirme que não há erro.
 
-- [ ] **Passo 4: Teste manual rápido** — criar um `.tsx` de teste temporário (não commitado) ou usar o Storybook/página existente pra renderizar `<Badge variant="ok">Pago</Badge>`, `<Badge variant="danger">Alerta</Badge>` etc. e confirmar visualmente que as cores aparecem corretas. Se não houver uma página fácil pra isso, pode pular e confirmar só via typecheck + leitura do código — não é obrigatório rodar visualmente nesta task específica, já que o uso real só acontece quando `sincronizacoes.tsx` e outros forem migrados num sub-projeto futuro.
+- [ ] **Passo 4: Teste manual rápido** — criar um `.tsx` de teste temporário (não commitado) ou usar uma página existente pra renderizar `<Badge variant="ok">Pago</Badge>`, `<Badge variant="danger">Alerta</Badge>` etc. e confirmar visualmente que as cores aparecem corretas. Se não houver uma página fácil pra isso, pode pular e confirmar só via typecheck + leitura do código — não é obrigatório rodar visualmente nesta task específica, já que o uso real só acontece quando `sincronizacoes.tsx` e outros forem migrados num sub-projeto futuro.
 
 - [ ] **Passo 5: Commit**
 
@@ -124,14 +196,14 @@ git commit -m "feat: adiciona variantes ok/danger/warn/info ao Badge do shadcn"
 
 ---
 
-## Task 3: Migrar `Erro` (basicos.tsx) para usar Alert do shadcn
+## Task 4: Migrar `Erro` (basicos.tsx) para usar Alert do shadcn
 
 **Files:**
 - Modify: `src/components/ui/basicos.tsx`
 
-**Contexto:** `Erro` é usado em vários lugares do app com a API `<Erro msg={string | null | undefined} />`. Manter essa mesma assinatura, só trocar a implementação interna pra usar `Alert`/`AlertDescription` do shadcn (instalado na Task 1).
+**Contexto:** `Erro` é usado em vários lugares do app com a API `<Erro msg={string | null | undefined} />`. Manter essa mesma assinatura, só trocar a implementação interna pra usar `Alert`/`AlertDescription` do shadcn (instalado na Task 2).
 
-- [ ] **Passo 1: Ler o alert.tsx gerado pela Task 1**
+- [ ] **Passo 1: Ler o alert.tsx gerado pela Task 2**
 
 ```bash
 cat src/components/ui/alert.tsx
@@ -164,7 +236,7 @@ git commit -m "feat: migra Erro para usar Alert do shadcn, mantendo a mesma API"
 
 ---
 
-## Task 4: Extrair schema zod compartilhado de autenticação
+## Task 5: Extrair schema zod compartilhado de autenticação
 
 **Files:**
 - Create: `src/lib/schemas/auth.ts`
@@ -232,7 +304,7 @@ npm run typecheck
 npm run test
 ```
 
-Nenhum teste existente cobre `authActions.ts` diretamente (confirme com `grep -rn "authActions" src/**/*.test.ts` — se não houver nenhum, é esperado, não precisa criar teste novo aqui, mantém o padrão do projeto).
+Nenhum teste existente cobre `authActions.ts` diretamente (confirme com `grep -rln "authActions" src -r --include="*.test.ts"` — se não houver nenhum, é esperado, não precisa criar teste novo aqui, mantém o padrão do projeto).
 
 - [ ] **Passo 4: Commit**
 
@@ -243,12 +315,12 @@ git commit -m "refactor: extrai schemas zod de autenticacao para modulo comparti
 
 ---
 
-## Task 5: Migrar `LoginForm` para shadcn + react-hook-form
+## Task 6: Migrar `LoginForm` para shadcn + react-hook-form
 
 **Files:**
 - Modify: `src/app/(auth)/login/login-form.tsx`
 
-- [ ] **Passo 1: Reescrever com os componentes shadcn instalados na Task 1 e o schema da Task 4**
+- [ ] **Passo 1: Reescrever com os componentes shadcn instalados na Task 2 e o schema da Task 5**
 
 ```typescript
 "use client";
@@ -325,12 +397,12 @@ git commit -m "feat: migra LoginForm para shadcn/ui + react-hook-form"
 
 ---
 
-## Task 6: Migrar `AlterarSenhaPage` para shadcn + react-hook-form
+## Task 7: Migrar `AlterarSenhaPage` para shadcn + react-hook-form
 
 **Files:**
 - Modify: `src/app/(auth)/alterar-senha/page.tsx`
 
-- [ ] **Passo 1: Reescrever seguindo o mesmo padrão da Task 5**
+- [ ] **Passo 1: Reescrever seguindo o mesmo padrão da Task 6**
 
 ```typescript
 "use client";
@@ -397,7 +469,7 @@ git commit -m "feat: migra AlterarSenhaPage para shadcn/ui + react-hook-form"
 
 ---
 
-## Task 7: Verificação final e handoff
+## Task 8: Verificação final e handoff
 
 **Files:** nenhum (task de verificação)
 
@@ -410,9 +482,9 @@ npm run test
 npm run build
 ```
 
-`typecheck`/`build` provavelmente ainda mostram erros em arquivos FORA do escopo desta task (que usam a API antiga de `Button`/`Badge`/`Tabs` — `sidebar.tsx`, `topbar.tsx`, componentes de `cobrancas/`, `visao-geral/`, `auditoria/`) — isso é esperado e aceitável (ver Task 1, Passo 4). Liste esses arquivos no relatório final pra ficarem documentados como pendências dos próximos sub-projetos.
+`typecheck`/`build` provavelmente ainda mostram erros em arquivos FORA do escopo desta task (que usam a API antiga de `Button`/`Badge`/`Tabs` — `sidebar.tsx`, `topbar.tsx`, componentes de `cobrancas/`, `visao-geral/`, `auditoria/`) — isso é esperado e aceitável (ver Task 2, Passo 4). Liste esses arquivos no relatório final pra ficarem documentados como pendências dos próximos sub-projetos.
 
-- [ ] **Passo 2: Teste manual final** — fluxo completo login → (troca de senha, se aplicável) → visão geral, confirmando visualmente que a tela de login está com o visual novo (shadcn padrão) e funcionando.
+- [ ] **Passo 2: Teste manual final** — fluxo completo login → (troca de senha, se aplicável) → visão geral, confirmando visualmente que a tela de login está com o visual novo (shadcn padrão) e funcionando, e que o resto do app (não migrado ainda) continua com o visual antigo intacto (prova de que o upgrade do Tailwind na Task 1 não quebrou nada fora do escopo desta PR).
 
 - [ ] **Passo 3: Push e abrir PR contra `develop`**
 
@@ -420,7 +492,8 @@ npm run build
 git push -u origin worktree-shadcn-ui-foundation
 gh pr create --base develop --title "feat: fundacao shadcn/ui + migracao do Login" --body "$(cat <<'EOF'
 ## Resumo
-- Instala shadcn/ui (visual padrao, CLI v4) com componentes base: button, input, select, textarea, label, badge (+ variantes ok/danger/warn/info), dialog, sheet, tabs, table, skeleton, alert, form.
+- Atualiza Tailwind CSS de v3 para v4 (pre-requisito da CLI atual do shadcn).
+- Instala shadcn/ui (visual padrao, CLI v4, base Base UI) com componentes base: button, input, select, textarea, label, badge (+ variantes ok/danger/warn/info), dialog, sheet, tabs, table, skeleton, alert, form.
 - Migra Erro (basicos.tsx) para usar Alert, mantendo a mesma API.
 - Extrai schemas zod de autenticacao para src/lib/schemas/auth.ts, compartilhados entre cliente (react-hook-form) e servidor (Server Actions).
 - Migra LoginForm e AlterarSenhaPage para shadcn + react-hook-form + zod.
@@ -431,6 +504,7 @@ gh pr create --base develop --title "feat: fundacao shadcn/ui + migracao do Logi
 - [x] npm run build
 - [x] npm run test
 - [x] Teste manual do fluxo de login e alteracao de senha
+- [x] Teste manual confirmando que o resto do app (nao migrado) continua com o visual antigo intacto apos o upgrade do Tailwind
 EOF
 )"
 ```
