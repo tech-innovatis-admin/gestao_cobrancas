@@ -12,11 +12,12 @@ export const SelectFiltro = ({ chave, rotulo, opcoes, todos = "Todos", w = "min-
   const ops = opcoes.map((o) => (typeof o === "string" ? { v: o, l: o } : o));
   const atual = get(chave) || TODOS_VALUE;
   const rotuloDe = (v: string) => (v === TODOS_VALUE ? todos : ops.find((o) => o.v === v)?.l ?? v);
+  const id = `filtro-${chave}`;
   return (
     <div className="flex flex-col gap-0.5">
-      <Label className="text-[12px] text-muted-foreground">{rotulo}</Label>
+      <Label htmlFor={id} className="text-[12px] text-muted-foreground">{rotulo}</Label>
       <Select value={atual} onValueChange={(v) => set({ [chave]: v === TODOS_VALUE ? "" : v })}>
-        <SelectTrigger className={w}><SelectValue>{rotuloDe}</SelectValue></SelectTrigger>
+        <SelectTrigger id={id} className={w}><SelectValue>{rotuloDe}</SelectValue></SelectTrigger>
         <SelectContent>
           <SelectItem value={TODOS_VALUE}>{todos}</SelectItem>
           {ops.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
@@ -28,10 +29,11 @@ export const SelectFiltro = ({ chave, rotulo, opcoes, todos = "Todos", w = "min-
 export const BuscaFiltro = ({ chave = "q", rotulo = "Buscar", placeholder, w = "min-w-[220px]" }: { chave?: string; rotulo?: string; placeholder?: string; w?: string }) => {
   const { get, set } = useUrlFiltros();
   let t: ReturnType<typeof setTimeout>;
+  const id = `filtro-${chave}`;
   return (
     <div className="flex flex-col gap-0.5">
-      <Label className="text-[12px] text-muted-foreground">{rotulo}</Label>
-      <Input className={w} placeholder={placeholder} defaultValue={get(chave)} onChange={(e) => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => set({ [chave]: v }), 400); }} />
+      <Label htmlFor={id} className="text-[12px] text-muted-foreground">{rotulo}</Label>
+      <Input id={id} className={w} placeholder={placeholder} defaultValue={get(chave)} onChange={(e) => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => set({ [chave]: v }), 400); }} />
     </div>
   );
 };
