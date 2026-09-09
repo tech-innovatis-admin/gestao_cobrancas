@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ROLE_LABEL, type Profile } from "@/types/domain";
 
 type SyncBadgeVariant = "ok" | "warn" | "danger" | "secondary";
-const tomSync: Record<string, [SyncBadgeVariant, string]> = {
+const syncVariantByStatus: Record<string, [SyncBadgeVariant, string]> = {
   success: ["ok", "Sincronizado"],
   running: ["warn", "Pendente"],
   partial: ["warn", "Pendente"],
@@ -17,7 +17,7 @@ const tomSync: Record<string, [SyncBadgeVariant, string]> = {
 
 export const Topbar = async ({ titulo, perfil, extra }: { titulo: string; perfil: Profile; extra?: React.ReactNode }) => {
   const s = await ultimaSync();
-  const [variant, label] = tomSync[s.status] ?? ["secondary", s.status];
+  const [variant, label] = syncVariantByStatus[s.status] ?? ["secondary", s.status];
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background px-6">
       <div className="flex items-center gap-4"><h1 className="text-[16px] font-semibold text-foreground">{titulo}</h1>{extra}</div>
