@@ -82,6 +82,10 @@
   @apply text-[13px] font-semibold;
 }
 
+@utility clicavel {
+  @apply cursor-pointer;
+}
+
 @utility tbl {
   @apply w-full border-collapse text-[12.5px];
   & thead th {
@@ -95,9 +99,6 @@
   }
   & tbody tr:hover {
     @apply bg-action-soft/50;
-  }
-  & tbody tr.clicavel {
-    @apply cursor-pointer;
   }
   & .num {
     @apply text-right;
