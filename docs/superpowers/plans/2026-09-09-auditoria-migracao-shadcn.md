@@ -99,6 +99,110 @@ git commit -m "feat: migra badges-dominio para variantes do Badge shadcn"
 
 ---
 
+## Task 1.5: Migrar `filtros/campos.tsx` (`SelectFiltro`/`BuscaFiltro`/`ToggleFiltro`/`LimparFiltros`)
+
+**Files:**
+- Modify: `src/components/filtros/campos.tsx`
+
+**Adiantado do sub-projeto "Cobranças — Filtros e Tabela"** (usuário viu o `<select>` nativo em Auditoria e pediu pra corrigir agora — como esse arquivo é compartilhado entre Auditoria/Cobranças/Visão Geral, corrigir aqui já resolve nos 3 lugares de uma vez). Os call-sites (`auditoria/alteracoes.tsx`, `cobrancas/filtros-cobrancas.tsx`, `visao-geral/filtros-globais.tsx`) usam `SelectFiltro`/`BuscaFiltro`/`ToggleFiltro`/`LimparFiltros` só com as props `chave`/`rotulo`/`opcoes`/`todos`/`w`/`placeholder`/`ligadoQuando`/`padraoLigado` — a assinatura não muda, então nenhum call-site precisa de alteração.
+
+Arquivo atual:
+
+```tsx
+"use client";
+import { useUrlFiltros } from "./use-url-filtros";
+export const SelectFiltro = ({ chave, rotulo, opcoes, todos = "Todos", w = "min-w-[130px]" }: { chave: string; rotulo: string; opcoes: { v: string; l: string }[] | string[]; todos?: string; w?: string }) => {
+  const { get, set } = useUrlFiltros();
+  const ops = opcoes.map((o) => (typeof o === "string" ? { v: o, l: o } : o));
+  return <label className="lbl">{rotulo}<select className={`field mt-0.5 ${w}`} value={get(chave)} onChange={(e) => set({ [chave]: e.target.value })}><option value="">{todos}</option>{ops.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}</select></label>;
+};
+export const BuscaFiltro = ({ chave = "q", rotulo = "Buscar", placeholder, w = "min-w-[220px]" }: { chave?: string; rotulo?: string; placeholder?: string; w?: string }) => {
+  const { get, set } = useUrlFiltros();
+  let t: ReturnType<typeof setTimeout>;
+  return <label className="lbl">{rotulo}<input className={`field mt-0.5 ${w}`} placeholder={placeholder} defaultValue={get(chave)} onChange={(e) => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => set({ [chave]: v }), 400); }} /></label>;
+};
+export const ToggleFiltro = ({ chave, rotulo, ligadoQuando = "1", padraoLigado = false }: { chave: string; rotulo: string; ligadoQuando?: string; padraoLigado?: boolean }) => {
+  const { get, set } = useUrlFiltros();
+  const atual = get(chave); const ligado = atual ? atual === ligadoQuando : padraoLigado;
+  return <label className="flex h-8 items-center gap-1.5 self-end text-[12px] text-ink-muted"><input type="checkbox" checked={ligado} onChange={(e) => set({ [chave]: e.target.checked ? (padraoLigado ? "" : ligadoQuando) : (padraoLigado ? "0" : "") })} />{rotulo}</label>;
+};
+export const LimparFiltros = () => { const { limpar } = useUrlFiltros(); return <button onClick={limpar} className="h-8 self-end rounded px-2 text-[12px] text-ink-muted hover:bg-canvas">Limpar</button>; };
+```
+
+- [ ] **Passo 1: Confirmar o arquivo real** (`cat src/components/filtros/campos.tsx`)
+
+- [ ] **Passo 2: Reescrever com `Select`/`Input`/`Label`/`Button` do shadcn**
+
+```tsx
+"use client";
+import { useUrlFiltros } from "./use-url-filtros";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const TODOS_VALUE = "__todos__";
+
+export const SelectFiltro = ({ chave, rotulo, opcoes, todos = "Todos", w = "min-w-[130px]" }: { chave: string; rotulo: string; opcoes: { v: string; l: string }[] | string[]; todos?: string; w?: string }) => {
+  const { get, set } = useUrlFiltros();
+  const ops = opcoes.map((o) => (typeof o === "string" ? { v: o, l: o } : o));
+  const atual = get(chave) || TODOS_VALUE;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Label className="text-[12px] text-muted-foreground">{rotulo}</Label>
+      <Select value={atual} onValueChange={(v) => set({ [chave]: v === TODOS_VALUE ? "" : v })}>
+        <SelectTrigger className={w}><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={TODOS_VALUE}>{todos}</SelectItem>
+          {ops.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+export const BuscaFiltro = ({ chave = "q", rotulo = "Buscar", placeholder, w = "min-w-[220px]" }: { chave?: string; rotulo?: string; placeholder?: string; w?: string }) => {
+  const { get, set } = useUrlFiltros();
+  let t: ReturnType<typeof setTimeout>;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Label className="text-[12px] text-muted-foreground">{rotulo}</Label>
+      <Input className={w} placeholder={placeholder} defaultValue={get(chave)} onChange={(e) => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => set({ [chave]: v }), 400); }} />
+    </div>
+  );
+};
+export const ToggleFiltro = ({ chave, rotulo, ligadoQuando = "1", padraoLigado = false }: { chave: string; rotulo: string; ligadoQuando?: string; padraoLigado?: boolean }) => {
+  const { get, set } = useUrlFiltros();
+  const atual = get(chave); const ligado = atual ? atual === ligadoQuando : padraoLigado;
+  return <label className="flex h-8 items-center gap-1.5 self-end text-[12px] text-muted-foreground"><input type="checkbox" checked={ligado} onChange={(e) => set({ [chave]: e.target.checked ? (padraoLigado ? "" : ligadoQuando) : (padraoLigado ? "0" : "") })} />{rotulo}</label>;
+};
+export const LimparFiltros = () => { const { limpar } = useUrlFiltros(); return <Button type="button" variant="ghost" size="sm" onClick={limpar} className="self-end">Limpar</Button>; };
+```
+
+Note: `SelectFiltro` precisa de um valor-sentinela (`TODOS_VALUE = "__todos__"`) pro item "Todos"/"Todas" — o `Select` do shadcn (Base UI) não aceita `value=""` num `SelectItem` (usado internamente como "nada selecionado"), diferente do `<select>` nativo que aceitava `<option value="">`. O `get(chave)` continua devolvendo `""` quando o filtro não está na URL (comportamento do `useUrlFiltros` não muda) — só a tradução `""↔TODOS_VALUE` acontece na borda deste componente, então `set({[chave]: ...})` continua escrevendo `""` na URL quando o usuário escolhe "Todos" (mesmo comportamento de antes, mesma URL gerada).
+
+`ToggleFiltro` fica com a mesma checkbox nativa (não instalamos um componente `Checkbox` do shadcn — não fazia parte da fundação, e é só esse um uso) — só a cor do texto (`text-ink-muted`→`text-muted-foreground`).
+
+- [ ] **Passo 3: Verificar tipos**
+
+```bash
+npm run typecheck
+```
+
+Não deve haver erro em `campos.tsx`. Não deve haver NENHUM erro novo em `alteracoes.tsx`, `filtros-cobrancas.tsx`, `filtros-globais.tsx` (call-sites — assinatura de props não mudou).
+
+- [ ] **Passo 4: Teste visual** — `npm run dev`, acessar `/auditoria?tab=alteracoes`. Confirmar: os selects ("Campo", "Ação", "Origem", "Sincronização") aparecem com o visual do shadcn (dropdown estilizado, não mais o menu nativo do navegador), escolher uma opção atualiza a URL e filtra a lista, escolher "Todos"/"Todas" de volta limpa o filtro (URL sem o parâmetro). O campo de busca (texto) e o botão "Limpar" também com visual novo.
+
+- [ ] **Passo 5: Commit**
+
+```bash
+git add src/components/filtros/campos.tsx
+git commit -m "feat: migra filtros compartilhados (Select/Input/Button) para shadcn"
+```
+
+**IMPORTANTE:** a mensagem do commit NÃO deve conter nenhuma linha de atribuição a IA.
+
+---
+
 ## Task 2: Migrar `qualidade.tsx`
 
 **Files:**
