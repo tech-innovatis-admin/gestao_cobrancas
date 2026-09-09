@@ -343,16 +343,20 @@ git commit -m "refactor: extrai schemas zod de autenticacao para modulo comparti
 
 ## Task 6: Migrar `LoginForm` para shadcn + react-hook-form
 
+**Status: ✅ Concluída** — commit `342b627`.
+
 **Files:**
 - Modify: `src/app/(auth)/login/login-form.tsx`
 
 **Atualizado pela "Decisão pós-Task 2":** usa `field` (`Field`/`FieldGroup`/`FieldLabel`/`FieldError`) em vez de `form` (`Form`/`FormField`/`FormItem`/`FormMessage`, que não existe nesta versão do registry). O encaixe erro↔campo que `FormField` fazia automaticamente via contexto agora é manual por campo, via `Controller` do react-hook-form.
 
-- [ ] **Passo 1: Reescrever com os componentes shadcn instalados na Task 2/3 e o schema da Task 5**
+**Achado durante a implementação, incorporado ao snippet abaixo:** chamar a dispatch do `useActionState` (`formAction`) direto no `onSubmit`, fora de uma `startTransition`, causa um crash real no Next.js 15/React 19 ("Rendered more hooks than during the previous render", lançado pelo Router interno do Next) ao processar o `redirect()` de sucesso da Server Action — reproduzido e confirmado pelo revisor de spec. Correção: `import { startTransition } from "react"` e `startTransition(() => formAction(fd))`. Vale pra Task 6 e Task 7 igualmente.
+
+- [x] **Passo 1: Reescrever com os componentes shadcn instalados na Task 2/3 e o schema da Task 5**
 
 ```typescript
 "use client";
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginAction, type FormState } from "@/services/authActions";
@@ -371,7 +375,7 @@ export const LoginForm = ({ next, aviso }: { next: string; aviso?: string }) => 
     fd.set("email", data.email);
     fd.set("senha", data.senha);
     fd.set("next", next);
-    formAction(fd);
+    startTransition(() => formAction(fd));
   };
 
   return (
@@ -416,7 +420,7 @@ Acesse `/login` (local Supabase já deve estar rodando — mesma instância usad
 - Email/senha corretos → loga e redireciona.
 - Email/senha incorretos → mostra o erro vindo da Server Action (`state.erro`, "E-mail ou senha inválidos.") através do componente `Erro`/`Alert`.
 
-- [ ] **Passo 3: Commit**
+- [x] **Passo 3: Commit**
 
 ```bash
 git add src/app/\(auth\)/login/login-form.tsx
@@ -427,16 +431,18 @@ git commit -m "feat: migra LoginForm para shadcn/ui + react-hook-form"
 
 ## Task 7: Migrar `AlterarSenhaPage` para shadcn + react-hook-form
 
+**Status: ✅ Concluída** — commit `9e577d6`.
+
 **Files:**
 - Modify: `src/app/(auth)/alterar-senha/page.tsx`
 
-**Atualizado pela "Decisão pós-Task 2":** mesmo padrão `field`+`Controller` da Task 6 (não `form`).
+**Atualizado pela "Decisão pós-Task 2":** mesmo padrão `field`+`Controller` da Task 6 (não `form`), incluindo o `startTransition` (ver nota na Task 6).
 
-- [ ] **Passo 1: Reescrever seguindo o mesmo padrão da Task 6**
+- [x] **Passo 1: Reescrever seguindo o mesmo padrão da Task 6**
 
 ```typescript
 "use client";
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { alterarSenhaAction, type FormState } from "@/services/authActions";
@@ -454,7 +460,7 @@ export default function AlterarSenhaPage() {
     const fd = new FormData();
     fd.set("senha", data.senha);
     fd.set("confirmar", data.confirmar);
-    formAction(fd);
+    startTransition(() => formAction(fd));
   };
 
   return (
@@ -490,7 +496,7 @@ export default function AlterarSenhaPage() {
 
 - [ ] **Passo 2: Testar manualmente** — logar com `admin@teste.local`, forçar `must_change_password=true` no profile via SQL se necessário pra acessar a tela (`update profiles set must_change_password=true where email='admin@teste.local'`), confirmar: senha curta (<8 chars) mostra erro client-side instantâneo; senhas diferentes mostram erro no campo "Confirmar"; senha válida salva e redireciona pra `/visao-geral`. Depois de testar, reverta `must_change_password` pra `false` se quiser manter o usuário de teste como estava.
 
-- [ ] **Passo 3: Commit**
+- [x] **Passo 3: Commit**
 
 ```bash
 git add src/app/\(auth\)/alterar-senha/page.tsx
