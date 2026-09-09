@@ -5,11 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exigirPapel } from "./authService";
 import type { AppRole } from "@/types/domain";
+import { loginSchema, alterarSenhaSchema } from "@/lib/schemas/auth";
 
 export interface FormState { erro?: string; ok?: boolean }
 
 export async function loginAction(_p: FormState, fd: FormData): Promise<FormState> {
-  const s = z.object({ email: z.string().email(), senha: z.string().min(1), next: z.string().default("/visao-geral") }).safeParse(Object.fromEntries(fd));
+  const next = String(fd.get("next") ?? "/visao-geral");
+  const s = loginSchema.safeParse({ email: fd.get("email"), senha: fd.get("senha") });
   if (!s.success) return { erro: "Informe e-mail e senha." };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: s.data.email.trim().toLowerCase(), password: s.data.senha });
@@ -17,13 +19,13 @@ export async function loginAction(_p: FormState, fd: FormData): Promise<FormStat
   const { data: prof } = await supabase.from("profiles").select("active, must_change_password").eq("email", s.data.email.trim().toLowerCase()).maybeSingle();
   if (!prof?.active) { await supabase.auth.signOut(); return { erro: "Usuário inativo. Procure o Master Admin." }; }
   await supabase.rpc("rpc_touch_last_login");
-  redirect(prof.must_change_password ? "/alterar-senha" : (s.data.next.startsWith("/") ? s.data.next : "/visao-geral"));
+  redirect(prof.must_change_password ? "/alterar-senha" : (next.startsWith("/") ? next : "/visao-geral"));
 }
 
 export async function logoutAction() { const s = await createClient(); await s.auth.signOut(); redirect("/login"); }
 
 export async function alterarSenhaAction(_p: FormState, fd: FormData): Promise<FormState> {
-  const s = z.object({ senha: z.string().min(8, "Mínimo de 8 caracteres."), confirmar: z.string() }).refine((d) => d.senha === d.confirmar, { message: "As senhas não conferem." }).safeParse(Object.fromEntries(fd));
+  const s = alterarSenhaSchema.safeParse({ senha: fd.get("senha"), confirmar: fd.get("confirmar") });
   if (!s.success) return { erro: s.error.issues[0].message };
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: s.data.senha });
