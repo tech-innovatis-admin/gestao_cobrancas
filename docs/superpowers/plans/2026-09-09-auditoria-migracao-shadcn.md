@@ -18,7 +18,7 @@ Este é o 2º dos 5 sub-projetos da migração visual completa (o 1º, Layout, j
 
 - `src/components/ui/badge.tsx`: variantes `ok`/`danger`/`warn`/`info`/`secondary`/`default`/`outline`/`destructive`/`ghost`/`link`.
 - `src/components/ui/table.tsx`: exporta `Table`, `TableHeader`, `TableBody`, `TableFooter`, `TableHead`, `TableRow`, `TableCell`, `TableCaption`.
-- `src/components/ui/select.tsx`: `Select` (= `SelectPrimitive.Root`, controlado por `value`/`onValueChange`), `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`.
+- `src/components/ui/select.tsx`: `Select` (= `SelectPrimitive.Root`, controlado por `value`/`onValueChange`), `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`. **Gotcha confirmado na Task 1.5:** `<SelectValue />` sem `children` mostra o valor bruto selecionado (ex: `"__todos__"` ou `"viewer"`) em vez do rótulo — o Base UI só resolve o rótulo automaticamente com uma lista declarativa de `items` no `Select.Root`, que não usamos aqui. Solução: sempre passar uma função resolvedora como `children` de `SelectValue`, ex. `<SelectValue>{(v) => mapaDeRotulo[v]}</SelectValue>`.
 - `src/components/ui/field.tsx`: `Field`, `FieldLabel`, `FieldError`, `FieldGroup` (usado no Login/Alterar Senha, `docs/superpowers/plans/2026-09-08-shadcn-ui-foundation-plan.md`, Tasks 6-7).
 - `src/services/authActions.ts` já tem `criarUsuarioAction(input)`, `resetarSenhaAction(userId, senha)`, `atualizarPerfilAction(input)` — chamadas DIRETAS (não via `useActionState`/`FormData` como `loginAction`), sem `redirect()` nenhuma delas. `usuarios.tsx` já embrulha as chamadas num `useTransition` próprio (`run`/`start`) — **não precisa de `startTransition` extra** (o bug do Next.js 15/React 19 encontrado no Login só ocorre com `useActionState` + `redirect()` fora de transition; nenhuma dessas 3 actions redireciona).
 - `novoUsuario` (schema zod) já existe inline em `authActions.ts:38`: `z.object({ full_name: z.string().min(2), email: z.string().email(), role: z.enum(["viewer","operator","master_admin"]), senha_temporaria: z.string().min(8) })`.
@@ -612,7 +612,7 @@ export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; r
           )} />
           <Controller control={novoForm.control} name="role" render={({ field, fieldState }) => (
             <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Perfil</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full"><SelectValue /></SelectTrigger><SelectContent>{PAPEIS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
+              <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full"><SelectValue>{(v: AppRole) => ROLE_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{PAPEIS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
               <FieldError errors={[fieldState.error]} /></Field>
           )} />
           <Controller control={novoForm.control} name="senha_temporaria" render={({ field, fieldState }) => (
@@ -632,7 +632,7 @@ export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; r
           )} />
           <Controller control={editarForm.control} name="role" render={({ field, fieldState }) => (
             <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Perfil</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full"><SelectValue /></SelectTrigger><SelectContent>{PAPEIS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
+              <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full"><SelectValue>{(v: AppRole) => ROLE_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{PAPEIS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
               <FieldError errors={[fieldState.error]} /></Field>
           )} />
           <Controller control={editarForm.control} name="active" render={({ field }) => (
