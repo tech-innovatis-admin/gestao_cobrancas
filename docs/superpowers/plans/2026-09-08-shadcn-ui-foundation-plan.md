@@ -21,6 +21,8 @@
 
 ## Task 1: Atualizar Tailwind CSS de v3 para v4
 
+**Status: ✅ Concluída** — commits `d800f0f` (upgrade) e `27003fd` (fix de tree-shaking das classes de tom do badge antigo).
+
 **Files:**
 - Modify: `postcss.config.mjs`, `tailwind.config.ts` (pode ser drasticamente reduzido ou removido — v4 usa `@theme` no CSS), `src/app/globals.css`, `package.json`
 
@@ -92,11 +94,13 @@ Confira `git status`/`git diff --stat` antes do `git add -A` — como a ferramen
 
 ## Task 2: Inicializar shadcn/ui e instalar componentes base
 
+**Status: ✅ Concluída** — commit `0e4e6d3`. **Achado importante: `form` não existe no registry atual (estilo `base-nova`/Base UI) — é um stub vazio.** Ver "Decisão pós-Task 2" abaixo (afeta Task 6 e Task 7, já reescritas). `layout.tsx` foi revertido pelo implementador porque o `init` tentou trocar a fonte do site (Geist) sem isso estar no escopo — correto, não fazia parte da decisão de design de "sem re-temar".
+
 **Files:**
 - Create: `components.json` (gerado pelo CLI)
 - Modify: `src/app/globals.css`, `package.json` (gerado/modificado pelo CLI)
 - Create: `src/lib/utils.ts` (gerado pelo CLI — **verificar se já existe** antes, ver Passo 1)
-- Create: `src/components/ui/{button,input,select,textarea,label,badge,dialog,sheet,tabs,table,skeleton,alert,form}.tsx` (gerados pelo CLI)
+- Create: `src/components/ui/{button,input,select,textarea,label,badge,dialog,sheet,tabs,table,skeleton,alert}.tsx` (gerados pelo CLI — `form` ficou de fora, ver nota acima)
 
 O projeto já tem `src/lib/utils.ts` (com a função `cn`, usada em `basicos.tsx`) e já tem `button.tsx`/`badge.tsx`/`tabs.tsx`/`modal.tsx`/`drawer.tsx` em `src/components/ui/`. O CLI do shadcn vai tentar sobrescrever esses arquivos — isso é esperado e é o objetivo desta task. Esta task só deve rodar DEPOIS da Task 1 (Tailwind v4 já instalado).
 
@@ -153,7 +157,29 @@ Não commitar mudanças em arquivos que dependem dos componentes antigos — se 
 
 ---
 
+---
+
+## Decisão pós-Task 2: `field` no lugar de `Form`
+
+O componente `form.tsx` (wrapper `Form`/`FormField`/`FormItem`/`FormLabel`/`FormMessage`, ligado automaticamente ao contexto do react-hook-form) que o design original previa **não existe no registry `base-nova`** (estilo Base UI) desta versão do CLI — é só um stub sem `files`. Confirmado com `npx shadcn@latest view form` (retorna `{"name":"form","type":"registry:ui"}`, sem conteúdo) vs. `npx shadcn@latest view field` (retorna o componente completo, documentado em `ui.shadcn.com/docs/components/base/field`).
+
+**Decisão (aprovada pelo usuário):** usar o componente `field` (`Field`, `FieldLabel`, `FieldError`, `FieldGroup`, `FieldContent` etc. — peça oficial e documentada do shadcn para o estilo Base UI) **mantendo react-hook-form + zod** (não abandona a Decisão 2 do design doc — schemas compartilhados cliente/servidor, validação instantânea). A diferença pro plano original: `FormField`/`FormMessage` faziam o encaixe erro↔campo automaticamente via contexto; com `field`, esse encaixe é manual — cada campo usa `useController` (ou `<Controller>`) do react-hook-form e passa o erro pra `<FieldError errors={[fieldState.error]} />` explicitamente. `FieldError` já tem `role="alert"` de fábrica; o par `Field`/`FieldLabel` já cuida de `data-invalid`/agrupamento visual.
+
+Rejeitadas: (a) portar o `form.tsx` antigo (baseado em Radix) pra Base UI — remaria contra a direção atual da ferramenta, seria a peça "não oficialmente mantida" nesse formato; (b) abandonar peça de formulário genérica e validar só no submit — perderia o ganho de acessibilidade (`aria-invalid`/`aria-describedby` automáticos) que era um dos motivos documentados da Decisão 2.
+
+Isso muda o conteúdo das Tasks 6 e 7 (já reescritas abaixo pra usar `field` em vez de `form`) e adiciona uma sub-tarefa em Task 3 pra instalar o componente `field` (que não fazia parte da lista original da Task 2).
+
+---
+
 ## Task 3: Badge com variantes de negócio (ok/danger/warn/info)
+
+**Antes do Passo 1 desta task: instalar o componente `field` (não estava na lista original da Task 2 — só ficou necessário depois da decisão acima).**
+
+```bash
+npx shadcn@latest add field --yes
+```
+
+Isso deve criar `src/components/ui/field.tsx` (e sua dependência `separator.tsx`, se ainda não existir). Confirme com `npm run typecheck` que nada quebrou antes de seguir pro Passo 1 original da task.
 
 **Files:**
 - Modify: `src/components/ui/badge.tsx` (gerado na Task 2 — adicionar variantes)
@@ -320,23 +346,25 @@ git commit -m "refactor: extrai schemas zod de autenticacao para modulo comparti
 **Files:**
 - Modify: `src/app/(auth)/login/login-form.tsx`
 
-- [ ] **Passo 1: Reescrever com os componentes shadcn instalados na Task 2 e o schema da Task 5**
+**Atualizado pela "Decisão pós-Task 2":** usa `field` (`Field`/`FieldGroup`/`FieldLabel`/`FieldError`) em vez de `form` (`Form`/`FormField`/`FormItem`/`FormMessage`, que não existe nesta versão do registry). O encaixe erro↔campo que `FormField` fazia automaticamente via contexto agora é manual por campo, via `Controller` do react-hook-form.
+
+- [ ] **Passo 1: Reescrever com os componentes shadcn instalados na Task 2/3 e o schema da Task 5**
 
 ```typescript
 "use client";
 import { useActionState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginAction, type FormState } from "@/services/authActions";
 import { loginSchema, type LoginInput } from "@/lib/schemas/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { Erro } from "@/components/ui/basicos";
 
 export const LoginForm = ({ next, aviso }: { next: string; aviso?: string }) => {
   const [state, formAction, pending] = useActionState<FormState, FormData>(loginAction, {});
-  const form = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: "", senha: "" } });
+  const { control, handleSubmit } = useForm<LoginInput>({ resolver: zodResolver(loginSchema), defaultValues: { email: "", senha: "" } });
 
   const onValid = (data: LoginInput) => {
     const fd = new FormData();
@@ -347,30 +375,30 @@ export const LoginForm = ({ next, aviso }: { next: string; aviso?: string }) => 
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onValid)} className="w-full max-w-sm space-y-4 rounded-lg border p-6 shadow-sm">
-        <div>
-          <h2 className="text-lg font-semibold">Entrar</h2>
-          <p className="text-sm text-muted-foreground">Use seu e-mail corporativo.</p>
-        </div>
-        <FormField control={form.control} name="email" render={({ field }) => (
-          <FormItem>
-            <FormLabel>E-mail</FormLabel>
-            <FormControl><Input type="email" autoComplete="email" {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
+    <form onSubmit={handleSubmit(onValid)} className="w-full max-w-sm space-y-4 rounded-lg border p-6 shadow-sm">
+      <div>
+        <h2 className="text-lg font-semibold">Entrar</h2>
+        <p className="text-sm text-muted-foreground">Use seu e-mail corporativo.</p>
+      </div>
+      <FieldGroup>
+        <Controller control={control} name="email" render={({ field, fieldState }) => (
+          <Field data-invalid={!!fieldState.error}>
+            <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
+            <Input id={field.name} type="email" autoComplete="email" aria-invalid={!!fieldState.error} {...field} />
+            <FieldError errors={[fieldState.error]} />
+          </Field>
         )} />
-        <FormField control={form.control} name="senha" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Senha</FormLabel>
-            <FormControl><Input type="password" autoComplete="current-password" {...field} /></FormControl>
-            <FormMessage />
-          </FormItem>
+        <Controller control={control} name="senha" render={({ field, fieldState }) => (
+          <Field data-invalid={!!fieldState.error}>
+            <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
+            <Input id={field.name} type="password" autoComplete="current-password" aria-invalid={!!fieldState.error} {...field} />
+            <FieldError errors={[fieldState.error]} />
+          </Field>
         )} />
-        <Erro msg={state.erro ?? aviso} />
-        <Button type="submit" size="lg" className="w-full" disabled={pending}>{pending ? "Entrando…" : "Entrar"}</Button>
-      </form>
-    </Form>
+      </FieldGroup>
+      <Erro msg={state.erro ?? aviso} />
+      <Button type="submit" size="lg" className="w-full" disabled={pending}>{pending ? "Entrando…" : "Entrar"}</Button>
+    </form>
   );
 };
 ```
@@ -402,23 +430,25 @@ git commit -m "feat: migra LoginForm para shadcn/ui + react-hook-form"
 **Files:**
 - Modify: `src/app/(auth)/alterar-senha/page.tsx`
 
+**Atualizado pela "Decisão pós-Task 2":** mesmo padrão `field`+`Controller` da Task 6 (não `form`).
+
 - [ ] **Passo 1: Reescrever seguindo o mesmo padrão da Task 6**
 
 ```typescript
 "use client";
 import { useActionState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { alterarSenhaAction, type FormState } from "@/services/authActions";
 import { alterarSenhaSchema, type AlterarSenhaInput } from "@/lib/schemas/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { Erro } from "@/components/ui/basicos";
 
 export default function AlterarSenhaPage() {
   const [state, formAction, pending] = useActionState<FormState, FormData>(alterarSenhaAction, {});
-  const form = useForm<AlterarSenhaInput>({ resolver: zodResolver(alterarSenhaSchema), defaultValues: { senha: "", confirmar: "" } });
+  const { control, handleSubmit } = useForm<AlterarSenhaInput>({ resolver: zodResolver(alterarSenhaSchema), defaultValues: { senha: "", confirmar: "" } });
 
   const onValid = (data: AlterarSenhaInput) => {
     const fd = new FormData();
@@ -429,30 +459,30 @@ export default function AlterarSenhaPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onValid)} className="w-full max-w-sm space-y-4 rounded-lg border p-6 shadow-sm">
-          <div>
-            <h2 className="text-lg font-semibold">Defina sua nova senha</h2>
-            <p className="text-sm text-muted-foreground">Por segurança, a senha temporária precisa ser substituída no primeiro acesso.</p>
-          </div>
-          <FormField control={form.control} name="senha" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nova senha</FormLabel>
-              <FormControl><Input type="password" autoComplete="new-password" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
+      <form onSubmit={handleSubmit(onValid)} className="w-full max-w-sm space-y-4 rounded-lg border p-6 shadow-sm">
+        <div>
+          <h2 className="text-lg font-semibold">Defina sua nova senha</h2>
+          <p className="text-sm text-muted-foreground">Por segurança, a senha temporária precisa ser substituída no primeiro acesso.</p>
+        </div>
+        <FieldGroup>
+          <Controller control={control} name="senha" render={({ field, fieldState }) => (
+            <Field data-invalid={!!fieldState.error}>
+              <FieldLabel htmlFor={field.name}>Nova senha</FieldLabel>
+              <Input id={field.name} type="password" autoComplete="new-password" aria-invalid={!!fieldState.error} {...field} />
+              <FieldError errors={[fieldState.error]} />
+            </Field>
           )} />
-          <FormField control={form.control} name="confirmar" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Confirmar</FormLabel>
-              <FormControl><Input type="password" autoComplete="new-password" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
+          <Controller control={control} name="confirmar" render={({ field, fieldState }) => (
+            <Field data-invalid={!!fieldState.error}>
+              <FieldLabel htmlFor={field.name}>Confirmar</FieldLabel>
+              <Input id={field.name} type="password" autoComplete="new-password" aria-invalid={!!fieldState.error} {...field} />
+              <FieldError errors={[fieldState.error]} />
+            </Field>
           )} />
-          <Erro msg={state.erro} />
-          <Button type="submit" size="lg" className="w-full" disabled={pending}>{pending ? "Salvando…" : "Salvar e continuar"}</Button>
-        </form>
-      </Form>
+        </FieldGroup>
+        <Erro msg={state.erro} />
+        <Button type="submit" size="lg" className="w-full" disabled={pending}>{pending ? "Salvando…" : "Salvar e continuar"}</Button>
+      </form>
     </main>
   );
 }
