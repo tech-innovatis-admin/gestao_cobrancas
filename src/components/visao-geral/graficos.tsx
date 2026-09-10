@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fmtBRL, fmtCompetencia } from "@/lib/format";
 import type { Graficos } from "@/services/dashboardService";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const C = { navy: "#0F1E3D", ok: "#1E7A46", info: "#1F4FA3", danger: "#B42323", warn: "#B25E09", grey: "#8A93A2" };
 const compacto = (v: number) => (v >= 1e6 ? `${(v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : v >= 1e3 ? `${Math.round(v / 1e3)} mil` : String(v));
@@ -26,9 +27,9 @@ export const GraficosVisaoGeral = ({ g }: { g: Graficos }) => (
     <Painel t="Saldo por responsável"><Barras data={g.porResponsavel} /></Painel>
     <Painel t="Top 5 projetos em atraso">
       {g.top5Atraso.length === 0 ? <p className="p-4 text-[12px] text-ink-faint">Nenhum projeto em atraso.</p> :
-      <table className="tbl"><thead><tr><th>Projeto</th><th className="num">Em atraso</th><th>Competência mais antiga</th></tr></thead><tbody>
-        {g.top5Atraso.map((t) => <tr key={t.id} className="clicavel"><td className="max-w-[200px] truncate"><Link href={`/cobrancas?receivable=${t.id}`} className="hover:text-action">{t.projeto}</Link></td><td className="num text-danger">{fmtBRL(t.valor)}</td><td>{fmtCompetencia(t.competencia)}</td></tr>)}
-      </tbody></table>}
+      <Table><TableHeader><TableRow><TableHead>Projeto</TableHead><TableHead className="num">Em atraso</TableHead><TableHead>Competência mais antiga</TableHead></TableRow></TableHeader><TableBody>
+        {g.top5Atraso.map((t) => <TableRow key={t.id} className="clicavel"><TableCell className="max-w-[200px] truncate"><Link href={`/cobrancas?receivable=${t.id}`} className="hover:text-action">{t.projeto}</Link></TableCell><TableCell className="num text-danger">{fmtBRL(t.valor)}</TableCell><TableCell>{fmtCompetencia(t.competencia)}</TableCell></TableRow>)}
+      </TableBody></Table>}
     </Painel>
     <div className="grid grid-cols-2 gap-3"><Painel t="Projetos por fase" h={180}><Contagem data={g.porFase} cores={[C.ok, C.info, C.grey, C.warn, C.danger]} /></Painel><Painel t="Situação da carteira" h={180}><Contagem data={g.carteira} cores={[C.ok, C.warn, C.danger]} /></Painel></div>
   </div>
