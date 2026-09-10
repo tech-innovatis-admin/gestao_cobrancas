@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { exigirPapel } from "./authService";
+import { projetoSchema, type ProjetoInput } from "@/lib/schemas/projetos";
 
 export type Resultado<T = undefined> = { ok: true; data?: T } | { ok: false; erro: string; conflito?: ConflitoInfo };
 export interface ConflitoInfo { current_version: number; current: Record<string, unknown> }
@@ -52,8 +53,6 @@ export async function criarRecebivel(input: NovoRecebivelInput): Promise<Resulta
 }
 
 // ---- projetos
-export const projetoSchema = z.object({ name: z.string().min(2), stage_code: z.enum(["A", "B", "C", "D"]).nullable(), project_status: z.enum(["active", "backlog", "lost"]), hub: z.enum(["IFES", "GOV"]), ministry_government: z.string().nullable(), institute: z.string().nullable(), foundation: z.string().nullable(), origin: z.enum(["google_sheets", "crm", "platform", "future_financial_database"]), provisional: z.boolean(), notes: z.string().nullable() });
-export type ProjetoInput = z.infer<typeof projetoSchema>;
 export async function criarProjeto(input: ProjetoInput): Promise<Resultado<{ id: string }>> {
   await exigirPapel("master_admin");
   const s = projetoSchema.safeParse(input); if (!s.success) return { ok: false, erro: s.error.issues[0].message };

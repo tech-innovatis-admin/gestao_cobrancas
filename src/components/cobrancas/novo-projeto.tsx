@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Erro } from "@/components/ui/basicos";
-import { criarProjeto, projetoSchema, type ProjetoInput } from "@/services/receivablesActions";
+import { criarProjeto } from "@/services/receivablesActions";
+import { projetoSchema, type ProjetoInput } from "@/lib/schemas/projetos";
 import { ORIGIN_LABEL, STATUS_LABEL } from "@/types/domain";
 
 const FASES = ["A", "B", "C", "D"] as const;
