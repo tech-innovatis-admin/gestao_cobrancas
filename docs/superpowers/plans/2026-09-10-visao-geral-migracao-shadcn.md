@@ -1,5 +1,7 @@
 # Visão Geral — Migração visual para shadcn/ui — Implementation Plan
 
+**Status: ✅ Concluído** (2026-09-10) — commits `a3ff42d`, `6287b8d`, `a91e3d3`. `npm run typecheck`/`lint`/`test` limpos; o único erro restante em todo o projeto está em `src/components/cobrancas/acoes-master.tsx` (último sub-projeto).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrar as 3 tabelas HTML (`.tbl`) restantes da tela de Visão Geral pra `Table` do shadcn. É um sub-projeto pequeno: `cards.tsx` (cartões executivos) e `filtros-globais.tsx` já não precisam de nenhuma mudança — `filtros-globais.tsx` só usa `SelectFiltro`/`BuscaFiltro`/`ToggleFiltro`/`LimparFiltros` de `@/components/filtros/campos`, já migrados no sub-projeto Auditoria (Task 1.5); `cards.tsx` não usa nenhum componente do sistema antigo (`Badge`/`Button`/`Tabs`/`.tbl`).
