@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Topbar } from "@/components/layout/topbar";
-import { Tabs } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/basicos";
 import { Alteracoes } from "@/components/auditoria/alteracoes";
 import { Usuarios } from "@/components/auditoria/usuarios";
@@ -20,7 +21,15 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
   if (perfil.role !== "master_admin") redirect("/visao-geral"); // RLS também bloqueia audit_logs
   const sp = await searchParams; const tab = TABS.some((t) => t.id === sp.tab) ? sp.tab! : "alteracoes";
   return (<><Topbar titulo="Auditoria" perfil={perfil} /><main className="space-y-3 p-5">
-    <Tabs itens={TABS} atual={tab} base="/auditoria" />
+    <Tabs value={tab}>
+      <TabsList>
+        {TABS.map((t) => (
+          <TabsTrigger key={t.id} value={t.id} nativeButton={false} render={<Link href={`/auditoria?tab=${t.id}`} />}>
+            {t.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
     <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-[480px]" />}>
       {tab === "alteracoes" && <TabAlteracoes sp={sp} />}{tab === "usuarios" && <TabUsuarios />}{tab === "sincronizacoes" && <TabSync />}{tab === "qualidade" && <TabQualidade />}
     </Suspense>
