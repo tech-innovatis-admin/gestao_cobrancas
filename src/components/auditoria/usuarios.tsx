@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Control, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,16 @@ import { novoUsuarioSchema, atualizarPerfilSchema, resetarSenhaSchema, type Novo
 import { ROLE_LABEL, type AppRole, type Profile } from "@/types/domain";
 
 const PAPEIS = Object.entries(ROLE_LABEL) as [AppRole, string][];
+
+function CampoPerfil<T extends { role: AppRole }>({ control }: { control: Control<T> }) {
+  return (
+    <Controller control={control} name={"role" as Path<T>} render={({ field, fieldState }) => (
+      <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Perfil</FieldLabel>
+        <Select value={field.value as AppRole} onValueChange={(v: AppRole | null) => v && field.onChange(v)}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: AppRole) => ROLE_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{PAPEIS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
+        <FieldError errors={[fieldState.error]} /></Field>
+    )} />
+  );
+}
 
 export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; responsaveisLegados: string[] }) => {
   const router = useRouter(); const [pending, start] = useTransition();
@@ -47,18 +57,14 @@ export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; r
       <form onSubmit={novoForm.handleSubmit((data) => run(() => criarUsuarioAction(data), `Usuário ${data.email} criado.`))}>
         <FieldGroup>
           <Controller control={novoForm.control} name="full_name" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
           )} />
           <Controller control={novoForm.control} name="email" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>E-mail</FieldLabel><Input id={field.name} type="email" {...field} /><FieldError errors={[fieldState.error]} /></Field>
+            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>E-mail</FieldLabel><Input id={field.name} type="email" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
           )} />
-          <Controller control={novoForm.control} name="role" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Perfil</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full"><SelectValue>{(v: AppRole) => ROLE_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{PAPEIS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
-              <FieldError errors={[fieldState.error]} /></Field>
-          )} />
+          <CampoPerfil control={novoForm.control} />
           <Controller control={novoForm.control} name="senha_temporaria" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} /><FieldError errors={[fieldState.error]} /></Field>
+            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
           )} />
           <p className="text-[11px] text-ink-faint">O usuário deverá trocar a senha no primeiro acesso. A senha temporária não será exibida novamente — copie-a agora.</p>
           <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Criar</Button></div>
@@ -70,19 +76,15 @@ export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; r
       <form onSubmit={editarForm.handleSubmit((data) => run(() => atualizarPerfilAction(data), "Usuário atualizado."))}>
         <FieldGroup>
           <Controller control={editarForm.control} name="full_name" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
           )} />
-          <Controller control={editarForm.control} name="role" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Perfil</FieldLabel>
-              <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full"><SelectValue>{(v: AppRole) => ROLE_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{PAPEIS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
-              <FieldError errors={[fieldState.error]} /></Field>
-          )} />
+          <CampoPerfil control={editarForm.control} />
           <Controller control={editarForm.control} name="active" render={({ field }) => (
             <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Ativo</label>
           )} />
           <Controller control={editarForm.control} name="legacy_responsible_name" render={({ field, fieldState }) => (
             <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Vincular a responsável legado (texto da planilha)</FieldLabel>
-              <Input id={field.name} list="legados" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || null)} /><datalist id="legados">{responsaveisLegados.map((r) => <option key={r} value={r} />)}</datalist>
+              <Input id={field.name} name={field.name} ref={field.ref} onBlur={field.onBlur} list="legados" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || null)} aria-invalid={!!fieldState.error} /><datalist id="legados">{responsaveisLegados.map((r) => <option key={r} value={r} />)}</datalist>
               <FieldError errors={[fieldState.error]} /></Field>
           )} />
           <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Salvar</Button></div>
@@ -94,7 +96,7 @@ export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; r
       <form onSubmit={senhaForm.handleSubmit((data) => alvo && run(() => resetarSenhaAction(alvo.user_id, data.senha_temporaria), "Senha resetada."))}>
         <FieldGroup>
           <Controller control={senhaForm.control} name="senha_temporaria" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nova senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} /><FieldError errors={[fieldState.error]} /></Field>
+            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nova senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
           )} />
           <p className="text-[11px] text-ink-faint">O usuário será obrigado a trocar a senha no próximo login.</p>
           <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Resetar</Button></div>
