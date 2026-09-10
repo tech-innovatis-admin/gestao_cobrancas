@@ -1,11 +1,10 @@
 "use server";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exigirPapel } from "./authService";
-import type { AppRole } from "@/types/domain";
 import { loginSchema, alterarSenhaSchema } from "@/lib/schemas/auth";
+import { novoUsuarioSchema, atualizarPerfilSchema, resetarSenhaSchema, type NovoUsuarioInput, type AtualizarPerfilInput } from "@/lib/schemas/usuarios";
 
 export interface FormState { erro?: string; ok?: boolean }
 
@@ -35,10 +34,9 @@ export async function alterarSenhaAction(_p: FormState, fd: FormData): Promise<F
 }
 
 // ---- administração de usuários (master_admin). Auth Admin API só no servidor.
-const novoUsuario = z.object({ full_name: z.string().min(2), email: z.string().email(), role: z.enum(["viewer", "operator", "master_admin"]), senha_temporaria: z.string().min(8) });
-export async function criarUsuarioAction(input: z.infer<typeof novoUsuario>): Promise<FormState> {
+export async function criarUsuarioAction(input: NovoUsuarioInput): Promise<FormState> {
   const me = await exigirPapel("master_admin");
-  const s = novoUsuario.safeParse(input); if (!s.success) return { erro: s.error.issues[0].message };
+  const s = novoUsuarioSchema.safeParse(input); if (!s.success) return { erro: s.error.issues[0].message };
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.createUser({ email: s.data.email.toLowerCase(), password: s.data.senha_temporaria, email_confirm: true,
     user_metadata: { full_name: s.data.full_name, role: s.data.role, must_change_password: true, created_by: me.user_id } });
@@ -47,17 +45,18 @@ export async function criarUsuarioAction(input: z.infer<typeof novoUsuario>): Pr
 }
 export async function resetarSenhaAction(userId: string, senhaTemporaria: string): Promise<FormState> {
   const me = await exigirPapel("master_admin");
-  if (senhaTemporaria.length < 8) return { erro: "Mínimo de 8 caracteres." };
+  const s = resetarSenhaSchema.safeParse({ senha_temporaria: senhaTemporaria }); if (!s.success) return { erro: s.error.issues[0].message };
   const admin = createAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(userId, { password: senhaTemporaria });
+  const { error } = await admin.auth.admin.updateUserById(userId, { password: s.data.senha_temporaria });
   if (error) return { erro: error.message };
   await admin.from("profiles").update({ must_change_password: true, updated_by: me.user_id }).eq("user_id", userId);
   await admin.from("audit_logs").insert({ entity_type: "profiles", entity_id: userId, action_type: "password_reset", actor_user_id: me.user_id, actor_name: me.full_name, actor_email: me.email, source: "platform" });
   return { ok: true };
 }
-export async function atualizarPerfilAction(input: { user_id: string; role: AppRole; active: boolean; full_name: string; legacy_responsible_name: string | null }): Promise<FormState> {
+export async function atualizarPerfilAction(input: AtualizarPerfilInput): Promise<FormState> {
   await exigirPapel("master_admin");
+  const s = atualizarPerfilSchema.safeParse(input); if (!s.success) return { erro: s.error.issues[0].message };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("rpc_update_profile", { p_user_id: input.user_id, p_role: input.role, p_active: input.active, p_full_name: input.full_name, p_legacy_responsible_name: input.legacy_responsible_name });
+  const { error } = await supabase.rpc("rpc_update_profile", { p_user_id: s.data.user_id, p_role: s.data.role, p_active: s.data.active, p_full_name: s.data.full_name, p_legacy_responsible_name: s.data.legacy_responsible_name });
   return error ? { erro: error.message } : { ok: true };
 }
