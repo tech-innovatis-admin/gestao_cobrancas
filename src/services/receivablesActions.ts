@@ -52,11 +52,11 @@ export async function criarRecebivel(input: NovoRecebivelInput): Promise<Resulta
 }
 
 // ---- projetos
-const projeto = z.object({ name: z.string().min(2), stage_code: z.enum(["A", "B", "C", "D"]).nullable(), project_status: z.enum(["active", "backlog", "lost"]), hub: z.enum(["IFES", "GOV"]), ministry_government: z.string().nullable(), institute: z.string().nullable(), foundation: z.string().nullable(), origin: z.enum(["google_sheets", "crm", "platform", "future_financial_database"]), provisional: z.boolean(), notes: z.string().nullable() });
-export type ProjetoInput = z.infer<typeof projeto>;
+export const projetoSchema = z.object({ name: z.string().min(2), stage_code: z.enum(["A", "B", "C", "D"]).nullable(), project_status: z.enum(["active", "backlog", "lost"]), hub: z.enum(["IFES", "GOV"]), ministry_government: z.string().nullable(), institute: z.string().nullable(), foundation: z.string().nullable(), origin: z.enum(["google_sheets", "crm", "platform", "future_financial_database"]), provisional: z.boolean(), notes: z.string().nullable() });
+export type ProjetoInput = z.infer<typeof projetoSchema>;
 export async function criarProjeto(input: ProjetoInput): Promise<Resultado<{ id: string }>> {
   await exigirPapel("master_admin");
-  const s = projeto.safeParse(input); if (!s.success) return { ok: false, erro: s.error.issues[0].message };
+  const s = projetoSchema.safeParse(input); if (!s.success) return { ok: false, erro: s.error.issues[0].message };
   const d = s.data;
   const { data, error } = await rpc("rpc_create_project", { p_name: d.name, p_stage_code: d.stage_code, p_project_status: d.project_status, p_hub: d.hub, p_ministry_government: vazio(d.ministry_government), p_institute: vazio(d.institute), p_foundation: vazio(d.foundation), p_origin: d.origin, p_provisional: d.provisional, p_notes: vazio(d.notes) });
   if (error) return { ok: false, erro: error.message }; revalidar(); return { ok: true, data: { id: data as string } };
