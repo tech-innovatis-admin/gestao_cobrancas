@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Erro } from "@/components/ui/basicos";
 import { fmtDataHora } from "@/lib/format";
 import { atualizarPerfilAction, criarUsuarioAction, resetarSenhaAction, type FormState } from "@/services/authActions";
@@ -24,10 +25,10 @@ export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; r
     <div className="panel">
       <div className="panel-head"><span className="panel-title">Usuários <span className="num font-normal text-ink-faint">({perfis.length})</span></span><Button size="sm" onClick={() => { setErro(null); setModal("novo"); }}>Criar usuário</Button></div>
       {ok && <p className="px-4 pt-2 text-[12px] text-ok">{ok}</p>}
-      <table className="tbl"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Ativo</th><th>Responsável legado</th><th>Último acesso</th><th>Troca de senha</th><th></th></tr></thead><tbody>
-        {perfis.map((p) => <tr key={p.user_id}><td className="font-medium">{p.full_name}</td><td>{p.email}</td><td><Badge tom={p.role === "master_admin" ? "blue" : "neutral"}>{ROLE_LABEL[p.role]}</Badge></td><td>{p.active ? <Badge tom="green">Ativo</Badge> : <Badge tom="red">Inativo</Badge>}</td><td>{p.legacy_responsible_name ?? "—"}</td><td>{fmtDataHora(p.last_login_at)}</td><td>{p.must_change_password ? <Badge tom="orange">Pendente</Badge> : "—"}</td>
-          <td className="text-right"><Button size="sm" variant="ghost" onClick={() => abrirEditar(p)}>Editar</Button><Button size="sm" variant="ghost" onClick={() => { setAlvo(p); setSenha(""); setErro(null); setModal("senha"); }}>Resetar senha</Button></td></tr>)}
-      </tbody></table>
+      <Table><TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>E-mail</TableHead><TableHead>Perfil</TableHead><TableHead>Ativo</TableHead><TableHead>Responsável legado</TableHead><TableHead>Último acesso</TableHead><TableHead>Troca de senha</TableHead><TableHead></TableHead></TableRow></TableHeader><TableBody>
+        {perfis.map((p) => <TableRow key={p.user_id}><TableCell className="font-medium">{p.full_name}</TableCell><TableCell>{p.email}</TableCell><TableCell><Badge variant={p.role === "master_admin" ? "info" : "secondary"}>{ROLE_LABEL[p.role]}</Badge></TableCell><TableCell>{p.active ? <Badge variant="ok">Ativo</Badge> : <Badge variant="danger">Inativo</Badge>}</TableCell><TableCell>{p.legacy_responsible_name ?? "—"}</TableCell><TableCell>{fmtDataHora(p.last_login_at)}</TableCell><TableCell>{p.must_change_password ? <Badge variant="warn">Pendente</Badge> : "—"}</TableCell>
+          <TableCell className="text-right"><Button size="sm" variant="ghost" onClick={() => abrirEditar(p)}>Editar</Button><Button size="sm" variant="ghost" onClick={() => { setAlvo(p); setSenha(""); setErro(null); setModal("senha"); }}>Resetar senha</Button></TableCell></TableRow>)}
+      </TableBody></Table>
     </div>
     <Modal aberto={modal === "novo"} titulo="Criar usuário" onFechar={() => setModal(null)} largura="max-w-md">
       <div className="space-y-3">
