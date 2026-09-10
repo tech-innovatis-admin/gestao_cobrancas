@@ -86,6 +86,14 @@
   @apply cursor-pointer;
 }
 
+@utility num {
+  @apply text-right;
+}
+
+@utility fix {
+  @apply sticky left-0 z-5 bg-white;
+}
+
 @utility tbl {
   @apply w-full border-collapse text-[12.5px];
   & thead th {
@@ -99,12 +107,6 @@
   }
   & tbody tr:hover {
     @apply bg-action-soft/50;
-  }
-  & .num {
-    @apply text-right;
-  }
-  & .fix {
-    @apply sticky left-0 bg-white z-5;
   }
 }
 
