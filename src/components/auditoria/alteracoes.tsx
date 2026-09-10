@@ -6,6 +6,7 @@ import { BuscaFiltro, LimparFiltros, SelectFiltro } from "@/components/filtros/c
 import { useUrlFiltros } from "@/components/filtros/use-url-filtros";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/basicos";
 import { BadgeSync } from "@/components/ui/badges-dominio";
 import { fmtCompetencia, fmtDataHora } from "@/lib/format";
@@ -30,18 +31,18 @@ export const Alteracoes = ({ rows, total, page }: { rows: AuditLogEnriched[]; to
     </div>
     <div className="panel">
       <div className="panel-head"><span className="panel-title">Alterações <span className="num font-normal text-ink-faint">({total})</span></span><div className="flex items-center gap-2 text-[12px]"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => set({ page: String(page - 1) })}>Anterior</Button><span className="num">{page}</span><Button variant="outline" size="sm" disabled={page * 50 >= total} onClick={() => set({ page: String(page + 1) })}>Próxima</Button></div></div>
-      {rows.length === 0 ? <EmptyState msg="Nenhum registro para os filtros." /> : <div className="max-h-[calc(100vh-320px)] overflow-auto"><table className="tbl"><thead><tr><th>Data/Hora</th><th>Usuário</th><th>E-mail</th><th>Projeto</th><th>Competência</th><th>Ação</th><th>Campos alterados</th><th>Origem</th><th>Sincronização</th></tr></thead><tbody>
-        {rows.map((r) => <tr key={r.id} className="clicavel" onClick={() => setAberto(r)}><td className="num">{fmtDataHora(r.occurred_at)}</td><td>{r.actor_name ?? (r.source === "google_sheets" ? "Alteração externa" : "sistema")}</td><td className="text-ink-muted">{r.actor_email ?? "—"}</td><td className="max-w-[220px] truncate" title={r.project_name ?? ""}>{r.project_name ?? <span className="text-ink-faint">{r.entity_type}</span>}</td><td>{r.competence ? fmtCompetencia(r.competence) : "—"}</td><td>{ACTION_LABEL[r.action_type] ?? r.action_type}</td><td className="max-w-[260px] truncate">{r.changed_fields.map((c) => FIELD_LABEL[c] ?? c).join(", ") || "—"}</td><td>{r.source}</td><td>{r.sync_status ? <BadgeSync s={r.sync_status} /> : "—"}</td></tr>)}
-      </tbody></table></div>}
+      {rows.length === 0 ? <EmptyState msg="Nenhum registro para os filtros." /> : <div className="max-h-[calc(100vh-320px)] overflow-auto"><Table><TableHeader><TableRow><TableHead>Data/Hora</TableHead><TableHead>Usuário</TableHead><TableHead>E-mail</TableHead><TableHead>Projeto</TableHead><TableHead>Competência</TableHead><TableHead>Ação</TableHead><TableHead>Campos alterados</TableHead><TableHead>Origem</TableHead><TableHead>Sincronização</TableHead></TableRow></TableHeader><TableBody>
+        {rows.map((r) => <TableRow key={r.id} className="clicavel" onClick={() => setAberto(r)}><TableCell className="num">{fmtDataHora(r.occurred_at)}</TableCell><TableCell>{r.actor_name ?? (r.source === "google_sheets" ? "Alteração externa" : "sistema")}</TableCell><TableCell className="text-ink-muted">{r.actor_email ?? "—"}</TableCell><TableCell className="max-w-[220px] truncate" title={r.project_name ?? ""}>{r.project_name ?? <span className="text-ink-faint">{r.entity_type}</span>}</TableCell><TableCell>{r.competence ? fmtCompetencia(r.competence) : "—"}</TableCell><TableCell>{ACTION_LABEL[r.action_type] ?? r.action_type}</TableCell><TableCell className="max-w-[260px] truncate">{r.changed_fields.map((c) => FIELD_LABEL[c] ?? c).join(", ") || "—"}</TableCell><TableCell>{r.source}</TableCell><TableCell>{r.sync_status ? <BadgeSync s={r.sync_status} /> : "—"}</TableCell></TableRow>)}
+      </TableBody></Table></div>}
     </div>
     <Modal aberto={!!aberto} titulo="Before × After" onFechar={() => setAberto(null)} largura="max-w-2xl">
       {aberto && (<div className="space-y-2 text-[12px]">
         <p><b>{ACTION_LABEL[aberto.action_type] ?? aberto.action_type}</b> · {aberto.entity_type} · {fmtDataHora(aberto.occurred_at)} · {aberto.actor_name ?? "—"} ({aberto.actor_email ?? aberto.source})</p>
         {aberto.source === "google_sheets" && <p className="rounded border border-warn/40 bg-warn-soft p-2 text-warn">Alteração identificada diretamente na planilha. O usuário responsável não pôde ser identificado pela plataforma.</p>}
         {aberto.metadata && <p className="text-ink-muted">Metadados: {JSON.stringify(aberto.metadata)}</p>}
-        <div className="max-h-[50vh] overflow-auto"><table className="tbl"><thead><tr><th>Campo</th><th>Antes</th><th>Depois</th></tr></thead><tbody>
-          {(aberto.changed_fields.length ? aberto.changed_fields : Object.keys(aberto.after_data ?? aberto.before_data ?? {})).map((c) => <tr key={c}><td>{FIELD_LABEL[c] ?? c}</td><td className="whitespace-normal text-ink-muted">{val(aberto.before_data?.[c])}</td><td className="whitespace-normal font-medium">{val(aberto.after_data?.[c])}</td></tr>)}
-        </tbody></table></div>
+        <div className="max-h-[50vh] overflow-auto"><Table><TableHeader><TableRow><TableHead>Campo</TableHead><TableHead>Antes</TableHead><TableHead>Depois</TableHead></TableRow></TableHeader><TableBody>
+          {(aberto.changed_fields.length ? aberto.changed_fields : Object.keys(aberto.after_data ?? aberto.before_data ?? {})).map((c) => <TableRow key={c}><TableCell>{FIELD_LABEL[c] ?? c}</TableCell><TableCell className="whitespace-normal text-ink-muted">{val(aberto.before_data?.[c])}</TableCell><TableCell className="whitespace-normal font-medium">{val(aberto.after_data?.[c])}</TableCell></TableRow>)}
+        </TableBody></Table></div>
       </div>)}
     </Modal>
   </>);
