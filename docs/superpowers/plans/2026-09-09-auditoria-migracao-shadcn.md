@@ -1,5 +1,7 @@
 # Auditoria — Migração visual para shadcn/ui — Implementation Plan
 
+**Status: ✅ Concluído** (2026-09-10) — todas as 9 tasks (+ Task 1.5, adiantada) implementadas e revisadas (spec + qualidade). `npm run typecheck`/`lint`/`test` limpos para tudo que este sub-projeto tocou; os únicos erros restantes no projeto são os 2 já esperados em `src/components/cobrancas/acoes-master.tsx` (sub-projeto "Cobranças — Ações do Master Admin", ainda não iniciado). Commits: `4944efb`, `28ec8da`/`5196715`, `348545b`, `ba53496`, `6657f63`, `202d6f5`, `73f92d3`, `79741ba`, `dd99d34`/`24e0ecd`, `511d8b5`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrar as 4 abas da tela de Auditoria (Alterações, Usuários, Sincronizações, Qualidade dos dados) e o wrapper `badges-dominio.tsx` (compartilhado) para os componentes do shadcn/ui — `Badge` (variantes novas), `Table`, `Select`/`Field`+react-hook-form+zod nos formulários de usuários, e `Tabs` na navegação entre abas — sem mudar nenhum comportamento de negócio.
