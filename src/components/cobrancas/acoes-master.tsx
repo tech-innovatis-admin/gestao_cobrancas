@@ -177,21 +177,47 @@ function FormValores({ r, erro, pending, onSalvar }: { r: Receivable; erro: stri
   );
 }
 function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { received_project: number; received_innovatis: number; received_date: string | null; invoice_number: string | null; note: string | null; justification: string | null }) => void }) {
-  const [f, setF] = useState({ rp: Number(r.received_project).toFixed(2).replace(".", ","), ri: Number(r.received_innovatis).toFixed(2).replace(".", ","), data: "", nf: "", note: "", just: "", confirmar: false });
-  const rp = parseBRL(f.rp), ri = parseBRL(f.ri);
-  const excede = rp > Number(r.planned_project) + 0.01 || ri > Number(r.planned_innovatis) + 0.01;
+  const plannedProject = Number(r.planned_project), plannedInnovatis = Number(r.planned_innovatis);
+  const schema = reciboFormSchema(plannedProject, plannedInnovatis);
+  const form = useForm<ReciboFormInput>({ resolver: zodResolver(schema), defaultValues: { rp: Number(r.received_project).toFixed(2).replace(".", ","), ri: Number(r.received_innovatis).toFixed(2).replace(".", ","), data: "", nf: "", note: "", just: "", confirmar: false } });
+  const [rpStr, riStr] = form.watch(["rp", "ri"]);
+  const rp = parseBRL(rpStr), ri = parseBRL(riStr);
+  const excede = rp > plannedProject + 0.01 || ri > plannedInnovatis + 0.01;
   const saldoAntes = Number(r.balance_project) + Number(r.balance_innovatis);
-  const saldoDepois = Math.max(Number(r.planned_project) - rp, 0) + Math.max(Number(r.planned_innovatis) - ri, 0);
-  const up = <K extends keyof typeof f>(k: K) => (v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
-  return (<div className="space-y-3">
-    <p className="text-[12px] text-ink-muted">Informe o valor <b>acumulado</b> recebido em cada perspectiva.</p>
-    <div className="grid grid-cols-2 gap-3"><Num t={`Recebido Projeto (previsto ${fmtBRL(r.planned_project)})`} v={f.rp} set={up("rp")} /><Num t={`Recebido Innovatis (previsto ${fmtBRL(r.planned_innovatis)})`} v={f.ri} set={up("ri")} />
-      <L t="Data do recebimento"><input type="date" className="field mt-0.5" value={f.data} onChange={(e) => up("data")(e.target.value)} /></L><L t="NF"><input className="field mt-0.5" value={f.nf} onChange={(e) => up("nf")(e.target.value)} /></L></div>
-    <div className="grid grid-cols-3 gap-2 rounded border border-line bg-canvas p-2 text-[12px]"><div>Saldo antes<div className="num font-semibold">{fmtBRL(saldoAntes)}</div></div><div>Valor recebido (total)<div className="num font-semibold text-ok">{fmtBRL(rp + ri)}</div></div><div>Saldo depois<div className="num font-semibold">{fmtBRL(saldoDepois)}</div></div></div>
-    {excede && <div className="rounded border border-warn/40 bg-warn-soft p-2 text-[12px] text-warn"><b>Atenção:</b> o recebido supera o previsto. O saldo não fica negativo; a inconsistência será sinalizada. Para continuar, justifique e confirme.<label className="mt-1 flex items-center gap-2"><input type="checkbox" checked={f.confirmar} onChange={(e) => up("confirmar")(e.target.checked)} />Confirmo que o valor está correto</label></div>}
-    <L t="Observação"><input className="field mt-0.5" value={f.note} onChange={(e) => up("note")(e.target.value)} /></L>
-    <L t={excede ? "Justificativa (obrigatória)" : "Justificativa (se correção)"}><textarea className="field mt-0.5 h-14 py-1.5" value={f.just} onChange={(e) => up("just")(e.target.value)} /></L>
-    <Rodape erro={erro} pending={pending || (excede && !f.confirmar)} rotulo="Registrar" onSalvar={() => onSalvar({ received_project: rp, received_innovatis: ri, received_date: f.data || null, invoice_number: f.nf || null, note: f.note || null, justification: f.just || null })} /></div>);
+  const saldoDepois = Math.max(plannedProject - rp, 0) + Math.max(plannedInnovatis - ri, 0);
+  const onValid = (f: ReciboFormInput) => onSalvar({ received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), received_date: f.data || null, invoice_number: f.nf || null, note: f.note || null, justification: f.just || null });
+  return (
+    <form onSubmit={form.handleSubmit(onValid)} className="space-y-3">
+      <p className="text-[12px] text-ink-muted">Informe o valor <b>acumulado</b> recebido em cada perspectiva.</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Controller control={form.control} name="rp" render={({ field, fieldState }) => (
+          <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>{`Recebido Projeto (previsto ${fmtBRL(plannedProject)})`}</FieldLabel><Input id={field.name} className="text-right" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+        )} />
+        <Controller control={form.control} name="ri" render={({ field, fieldState }) => (
+          <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>{`Recebido Innovatis (previsto ${fmtBRL(plannedInnovatis)})`}</FieldLabel><Input id={field.name} className="text-right" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+        )} />
+        <Controller control={form.control} name="data" render={({ field, fieldState }) => (
+          <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Data do recebimento</FieldLabel><Input id={field.name} type="date" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+        )} />
+        <Controller control={form.control} name="nf" render={({ field, fieldState }) => (
+          <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>NF</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+        )} />
+      </div>
+      <div className="grid grid-cols-3 gap-2 rounded border border-line bg-canvas p-2 text-[12px]"><div>Saldo antes<div className="num font-semibold">{fmtBRL(saldoAntes)}</div></div><div>Valor recebido (total)<div className="num font-semibold text-ok">{fmtBRL(rp + ri)}</div></div><div>Saldo depois<div className="num font-semibold">{fmtBRL(saldoDepois)}</div></div></div>
+      {excede && <div className="rounded border border-warn/40 bg-warn-soft p-2 text-[12px] text-warn"><b>Atenção:</b> o recebido supera o previsto. O saldo não fica negativo; a inconsistência será sinalizada. Para continuar, justifique e confirme.
+        <Controller control={form.control} name="confirmar" render={({ field, fieldState }) => (
+          <div className="mt-1"><label className="flex items-center gap-2"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Confirmo que o valor está correto</label><FieldError errors={[fieldState.error]} /></div>
+        )} />
+      </div>}
+      <Controller control={form.control} name="note" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Observação</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="just" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>{excede ? "Justificativa (obrigatória)" : "Justificativa (se correção)"}</FieldLabel><Textarea id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Erro msg={erro} /><div className="mt-4 flex justify-end"><Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Registrar"}</Button></div>
+    </form>
+  );
 }
 function FormParcela({ r, etapas, erro, pending, onSalvar }: { r: Receivable; etapas: CollectionStatus[]; erro: string | null; pending: boolean; onSalvar: (d: Omit<Parameters<typeof criarRecebivel>[0], "project_id">) => void }) {
   const [f, setF] = useState({ competence: "", pp: "", pi: "", rp: "0", ri: "0", etapa: "", reason: "", action: "", deadline: "", flag: "", origin: "platform" as Receivable["origin"], provisional: r.project_provisional });
