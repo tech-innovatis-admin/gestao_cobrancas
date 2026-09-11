@@ -143,18 +143,38 @@ function FormSituacao({ r, erro, pending, onSalvar }: { r: Receivable; erro: str
 const Num = ({ t, v, set }: { t: string; v: string; set: (s: string) => void }) => <L t={t}><input className="field num mt-0.5 text-right" value={v} onChange={(e) => set(e.target.value)} /></L>;
 function FormValores({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { planned_project: number; planned_innovatis: number; received_project: number; received_innovatis: number; competence: string; flag: string | null; origin: Receivable["origin"]; provisional: boolean; legacy_consolidated: boolean; justification: string | null }) => void }) {
   const s = (n: number | string) => Number(n).toFixed(2).replace(".", ",");
-  const [f, setF] = useState({ pp: s(r.planned_project), pi: s(r.planned_innovatis), rp: s(r.received_project), ri: s(r.received_innovatis), competence: r.competence, flag: r.flag ?? "", origin: r.origin, provisional: r.provisional, legacy_consolidated: r.legacy_consolidated, justification: "" });
-  const up = <K extends keyof typeof f>(k: K) => (v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
-  return (<div className="grid grid-cols-2 gap-3">
-    <Num t="Previsto Projeto" v={f.pp} set={up("pp")} /><Num t="Previsto Innovatis" v={f.pi} set={up("pi")} />
-    <Num t="Recebido Projeto" v={f.rp} set={up("rp")} /><Num t="Recebido Innovatis" v={f.ri} set={up("ri")} />
-    <L t="Competência (1º dia do mês)"><input type="date" className="field mt-0.5" value={f.competence} onChange={(e) => up("competence")(e.target.value)} /></L>
-    <L t="FLAG"><input className="field mt-0.5" value={f.flag} onChange={(e) => up("flag")(e.target.value)} /></L>
-    <L t="Origem"><select className="field mt-0.5" value={f.origin} onChange={(e) => up("origin")(e.target.value as Receivable["origin"])}>{ORIGENS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></L>
-    <div className="flex flex-col gap-1 self-end pb-1 text-[12px]"><label className="flex items-center gap-2"><input type="checkbox" checked={f.provisional} onChange={(e) => up("provisional")(e.target.checked)} />Provisório</label><label className="flex items-center gap-2"><input type="checkbox" checked={f.legacy_consolidated} onChange={(e) => up("legacy_consolidated")(e.target.checked)} />Consolidado (vencidos até jun/2026)</label></div>
-    <L t="Justificativa" c="col-span-2"><textarea className="field mt-0.5 h-14 py-1.5" value={f.justification} onChange={(e) => up("justification")(e.target.value)} /></L>
-    <div className="col-span-2"><Rodape erro={erro} pending={pending} onSalvar={() => onSalvar({ planned_project: parseBRL(f.pp), planned_innovatis: parseBRL(f.pi), received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), competence: f.competence.slice(0, 8) + "01", flag: f.flag || null, origin: f.origin, provisional: f.provisional, legacy_consolidated: f.legacy_consolidated, justification: f.justification || null })} /></div>
-  </div>);
+  const form = useForm<FinanceiroFormInput>({ resolver: zodResolver(financeiroFormSchema), defaultValues: { pp: s(r.planned_project), pi: s(r.planned_innovatis), rp: s(r.received_project), ri: s(r.received_innovatis), competence: r.competence, flag: r.flag ?? "", origin: r.origin, provisional: r.provisional, legacy_consolidated: r.legacy_consolidated, justification: "" } });
+  const onValid = (f: FinanceiroFormInput) => onSalvar({ planned_project: parseBRL(f.pp), planned_innovatis: parseBRL(f.pi), received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), competence: f.competence.slice(0, 8) + "01", flag: f.flag || null, origin: f.origin, provisional: f.provisional, legacy_consolidated: f.legacy_consolidated, justification: f.justification || null });
+  const CampoNum = ({ name, label }: { name: "pp" | "pi" | "rp" | "ri"; label: string }) => (
+    <Controller control={form.control} name={name} render={({ field, fieldState }) => (
+      <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>{label}</FieldLabel><Input id={field.name} className="text-right" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+    )} />
+  );
+  return (
+    <form onSubmit={form.handleSubmit(onValid)} className="grid grid-cols-2 gap-3">
+      <CampoNum name="pp" label="Previsto Projeto" /><CampoNum name="pi" label="Previsto Innovatis" />
+      <CampoNum name="rp" label="Recebido Projeto" /><CampoNum name="ri" label="Recebido Innovatis" />
+      <Controller control={form.control} name="competence" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Competência (1º dia do mês)</FieldLabel><Input id={field.name} type="date" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="flag" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>FLAG</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="origin" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Origem</FieldLabel>
+          <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: keyof typeof ORIGIN_LABEL) => ORIGIN_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{ORIGENS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <div className="flex flex-col gap-1 self-end pb-1 text-[12px]">
+        <Controller control={form.control} name="provisional" render={({ field }) => <label className="flex items-center gap-2"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Provisório</label>} />
+        <Controller control={form.control} name="legacy_consolidated" render={({ field }) => <label className="flex items-center gap-2"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Consolidado (vencidos até jun/2026)</label>} />
+      </div>
+      <Controller control={form.control} name="justification" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error} className="col-span-2"><FieldLabel htmlFor={field.name}>Justificativa</FieldLabel><Textarea id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <div className="col-span-2"><Erro msg={erro} /><div className="mt-4 flex justify-end"><Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button></div></div>
+    </form>
+  );
 }
 function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { received_project: number; received_innovatis: number; received_date: string | null; invoice_number: string | null; note: string | null; justification: string | null }) => void }) {
   const [f, setF] = useState({ rp: Number(r.received_project).toFixed(2).replace(".", ","), ri: Number(r.received_innovatis).toFixed(2).replace(".", ","), data: "", nf: "", note: "", just: "", confirmar: false });
