@@ -30,6 +30,10 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
+      // forceRender: sem isso, um Dialog aberto dentro de outro Dialog/Sheet (ex.: AcoesMaster dentro do
+      // Sheet de DrawerCobranca) é tratado como "nested" pelo Base UI e não renderiza seu próprio backdrop,
+      // então clique fora não fecha o Dialog interno.
+      forceRender
       className={cn(
         "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
