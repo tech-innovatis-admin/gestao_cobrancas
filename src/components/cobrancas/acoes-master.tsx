@@ -1,10 +1,17 @@
 "use client";
 import { useState, useTransition } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Erro, Pendente } from "@/components/ui/basicos";
 import { fmtBRL, parseBRL } from "@/lib/format";
 import { alterarFase, alterarSituacao, criarRecebivel, editarProjeto, excluirDaGestao, registrarRecebimento, restaurarProjeto, salvarFinanceiro, type Resultado } from "@/services/receivablesActions";
+import { editarProjetoSchema, type EditarProjetoInput, alterarFaseSchema, type AlterarFaseInput, alterarSituacaoSchema, type AlterarSituacaoInput, financeiroFormSchema, type FinanceiroFormInput, reciboFormSchema, type ReciboFormInput, novaParcelaFormSchema, type NovaParcelaFormInput, motivoSchema, type MotivoInput } from "@/lib/schemas/receivables-admin";
 import { ORIGIN_LABEL, type CollectionStatus, type Receivable } from "@/types/domain";
 
 type Acao = "cadastro" | "fase" | "situacao" | "valores" | "recebimento" | "parcela" | "excluir" | "restaurar" | null;
@@ -52,20 +59,41 @@ export const AcoesMaster = ({ r, etapas, onFeito }: { r: Receivable; etapas: Col
 const Rodape = ({ erro, pending, onSalvar, rotulo = "Salvar", danger }: { erro: string | null; pending: boolean; onSalvar: () => void; rotulo?: string; danger?: boolean }) => (<><Erro msg={erro} /><div className="mt-4 flex justify-end"><Button variant={danger ? "danger" : "primary"} disabled={pending} onClick={onSalvar}>{pending ? "Salvando…" : rotulo}</Button></div></>);
 const L = ({ t, children, c }: { t: string; children: React.ReactNode; c?: string }) => <label className={`lbl ${c ?? ""}`}>{t}{children}</label>;
 
-function FormCadastro({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { name: string; hub: "IFES" | "GOV"; ministry_government: string | null; institute: string | null; foundation: string | null; origin: Receivable["origin"]; provisional: boolean; notes: string | null }) => void }) {
-  const [f, setF] = useState({ name: r.project_name, hub: r.hub, ministry_government: r.ministry_government ?? "", institute: r.institute ?? "", foundation: r.foundation ?? "", origin: r.project_origin, provisional: r.project_provisional, notes: "" });
-  const up = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.type === "checkbox" ? (e.target as HTMLInputElement).checked : e.target.value }));
-  return (<div className="grid grid-cols-2 gap-3">
-    <L t="Projeto" c="col-span-2"><input className="field mt-0.5" value={f.name} onChange={up("name")} /></L>
-    <L t="HUB"><select className="field mt-0.5" value={f.hub} onChange={up("hub")}><option>IFES</option><option>GOV</option></select></L>
-    <L t="Ministério / Governo"><input className="field mt-0.5" value={f.ministry_government} onChange={up("ministry_government")} /></L>
-    <L t="Instituto"><input className="field mt-0.5" value={f.institute} onChange={up("institute")} /></L>
-    <L t="Fundação"><input className="field mt-0.5" value={f.foundation} onChange={up("foundation")} /></L>
-    <L t="Origem"><select className="field mt-0.5" value={f.origin} onChange={up("origin")}>{ORIGENS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></L>
-    <label className="flex items-center gap-2 self-end pb-2 text-[12px]"><input type="checkbox" checked={f.provisional} onChange={up("provisional")} />Provisório (CRM / pré-base)</label>
-    <L t="Observação" c="col-span-2"><textarea className="field mt-0.5 h-14 py-1.5" value={f.notes} onChange={up("notes")} /></L>
-    <div className="col-span-2"><Rodape erro={erro} pending={pending} onSalvar={() => onSalvar({ ...f, ministry_government: f.ministry_government || null, institute: f.institute || null, foundation: f.foundation || null, notes: f.notes || null })} /></div>
-  </div>);
+function FormCadastro({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: EditarProjetoInput) => void }) {
+  const form = useForm<EditarProjetoInput>({ resolver: zodResolver(editarProjetoSchema), defaultValues: { name: r.project_name, hub: r.hub, ministry_government: r.ministry_government ?? "", institute: r.institute ?? "", foundation: r.foundation ?? "", origin: r.project_origin, provisional: r.project_provisional, notes: "" } });
+  return (
+    <form onSubmit={form.handleSubmit(onSalvar)} className="grid grid-cols-2 gap-3">
+      <Controller control={form.control} name="name" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error} className="col-span-2"><FieldLabel htmlFor={field.name}>Projeto</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="hub" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>HUB</FieldLabel>
+          <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: string) => v}</SelectValue></SelectTrigger><SelectContent><SelectItem value="IFES">IFES</SelectItem><SelectItem value="GOV">GOV</SelectItem></SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="ministry_government" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Ministério / Governo</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="institute" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Instituto</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="foundation" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Fundação</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="origin" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Origem</FieldLabel>
+          <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: keyof typeof ORIGIN_LABEL) => ORIGIN_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{ORIGENS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="provisional" render={({ field }) => (
+        <label className="flex items-center gap-2 self-end pb-2 text-[12px]"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Provisório (CRM / pré-base)</label>
+      )} />
+      <Controller control={form.control} name="notes" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error} className="col-span-2"><FieldLabel htmlFor={field.name}>Observação</FieldLabel><Textarea id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <div className="col-span-2"><Erro msg={erro} /><div className="mt-4 flex justify-end"><Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button></div></div>
+    </form>
+  );
 }
 function FormFase({ atual, erro, pending, onSalvar }: { atual: string | null; erro: string | null; pending: boolean; onSalvar: (f: string, j: string | null) => void }) {
   const [f, setF] = useState(atual ?? "A"); const [j, setJ] = useState("");
