@@ -96,11 +96,22 @@ function FormCadastro({ r, erro, pending, onSalvar }: { r: Receivable; erro: str
   );
 }
 function FormFase({ atual, erro, pending, onSalvar }: { atual: string | null; erro: string | null; pending: boolean; onSalvar: (f: string, j: string | null) => void }) {
-  const [f, setF] = useState(atual ?? "A"); const [j, setJ] = useState("");
-  return (<div className="space-y-3"><p className="text-[12px] text-ink-muted">Fase atual: <b>{atual ?? "Pendente"}</b>. Não há exigência de progressão linear; a alteração é auditada.</p>
-    <L t="Nova fase"><select className="field mt-0.5" value={f} onChange={(e) => setF(e.target.value)}>{["A", "B", "C", "D"].map((x) => <option key={x}>{x}</option>)}</select></L>
-    <L t="Justificativa (opcional)"><textarea className="field mt-0.5 h-14 py-1.5" value={j} onChange={(e) => setJ(e.target.value)} /></L>
-    <Rodape erro={erro} pending={pending} onSalvar={() => onSalvar(f, j || null)} /></div>);
+  const form = useForm<AlterarFaseInput>({ resolver: zodResolver(alterarFaseSchema), defaultValues: { stage_code: (atual ?? "A") as AlterarFaseInput["stage_code"], justification: "" } });
+  const onValid = (d: AlterarFaseInput) => onSalvar(d.stage_code, d.justification || null);
+  return (
+    <form onSubmit={form.handleSubmit(onValid)} className="space-y-3">
+      <p className="text-[12px] text-ink-muted">Fase atual: <b>{atual ?? "Pendente"}</b>. Não há exigência de progressão linear; a alteração é auditada.</p>
+      <Controller control={form.control} name="stage_code" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nova fase</FieldLabel>
+          <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: string) => v}</SelectValue></SelectTrigger><SelectContent>{["A", "B", "C", "D"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="justification" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Justificativa (opcional)</FieldLabel><Textarea id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Erro msg={erro} /><div className="mt-4 flex justify-end"><Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button></div>
+    </form>
+  );
 }
 function FormSituacao({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (s: "active" | "backlog" | "lost", j: string | null, f: string | null) => void }) {
   const [s, setS] = useState<"active" | "backlog" | "lost">(r.project_status === "archived" ? "active" : r.project_status); const [j, setJ] = useState(""); const [f, setF] = useState(r.stage_code ?? "");
