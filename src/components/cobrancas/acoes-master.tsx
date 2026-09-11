@@ -220,18 +220,49 @@ function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable; erro: 
   );
 }
 function FormParcela({ r, etapas, erro, pending, onSalvar }: { r: Receivable; etapas: CollectionStatus[]; erro: string | null; pending: boolean; onSalvar: (d: Omit<Parameters<typeof criarRecebivel>[0], "project_id">) => void }) {
-  const [f, setF] = useState({ competence: "", pp: "", pi: "", rp: "0", ri: "0", etapa: "", reason: "", action: "", deadline: "", flag: "", origin: "platform" as Receivable["origin"], provisional: r.project_provisional });
-  const up = <K extends keyof typeof f>(k: K) => (v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
-  return (<div className="grid grid-cols-2 gap-3">
-    <p className="col-span-2 text-[12px] text-ink-muted">Projeto: <b>{r.project_name}</b></p>
-    <L t="Competência"><input type="month" className="field mt-0.5" value={f.competence} onChange={(e) => up("competence")(e.target.value)} /></L><L t="Etapa da cobrança"><select className="field mt-0.5" value={f.etapa} onChange={(e) => up("etapa")(e.target.value)}><option value="">—</option>{etapas.filter((e) => e.hub === r.hub).map((e) => <option key={e.id} value={e.id}>{e.display_label}</option>)}</select></L>
-    <Num t="Previsto Projeto" v={f.pp} set={up("pp")} /><Num t="Previsto Innovatis" v={f.pi} set={up("pi")} /><Num t="Recebido Projeto" v={f.rp} set={up("rp")} /><Num t="Recebido Innovatis" v={f.ri} set={up("ri")} />
-    <L t="Motivo"><input className="field mt-0.5" value={f.reason} onChange={(e) => up("reason")(e.target.value)} /></L><L t="Ação"><input className="field mt-0.5" value={f.action} onChange={(e) => up("action")(e.target.value)} /></L>
-    <L t="Prazo"><input type="date" className="field mt-0.5" value={f.deadline} onChange={(e) => up("deadline")(e.target.value)} /></L><L t="FLAG"><input className="field mt-0.5" value={f.flag} onChange={(e) => up("flag")(e.target.value)} /></L>
-    <L t="Origem"><select className="field mt-0.5" value={f.origin} onChange={(e) => up("origin")(e.target.value as Receivable["origin"])}>{ORIGENS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></L>
-    <label className="flex items-center gap-2 self-end pb-2 text-[12px]"><input type="checkbox" checked={f.provisional} onChange={(e) => up("provisional")(e.target.checked)} />Provisório</label>
-    <div className="col-span-2"><Rodape erro={erro} pending={pending} rotulo="Criar" onSalvar={() => onSalvar({ competence: `${f.competence}-01`, planned_project: parseBRL(f.pp), planned_innovatis: parseBRL(f.pi), received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), collection_status_id: f.etapa || null, reason: f.reason || null, action: f.action || null, responsible_user_id: null, responsible_legacy_name: null, operational_deadline: f.deadline || null, flag: f.flag || null, origin: f.origin, provisional: f.provisional })} /></div>
-  </div>);
+  const opcoesHub = etapas.filter((e) => e.hub === r.hub);
+  const form = useForm<NovaParcelaFormInput>({ resolver: zodResolver(novaParcelaFormSchema), defaultValues: { competence: "", pp: "", pi: "", rp: "0", ri: "0", etapa: "", reason: "", action: "", deadline: "", flag: "", origin: "platform", provisional: r.project_provisional } });
+  const onValid = (f: NovaParcelaFormInput) => onSalvar({ competence: `${f.competence}-01`, planned_project: parseBRL(f.pp), planned_innovatis: parseBRL(f.pi), received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), collection_status_id: f.etapa || null, reason: f.reason || null, action: f.action || null, responsible_user_id: null, responsible_legacy_name: null, operational_deadline: f.deadline || null, flag: f.flag || null, origin: f.origin, provisional: f.provisional });
+  const CampoNum = ({ name, label }: { name: "pp" | "pi" | "rp" | "ri"; label: string }) => (
+    <Controller control={form.control} name={name} render={({ field, fieldState }) => (
+      <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>{label}</FieldLabel><Input id={field.name} className="text-right" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+    )} />
+  );
+  return (
+    <form onSubmit={form.handleSubmit(onValid)} className="grid grid-cols-2 gap-3">
+      <p className="col-span-2 text-[12px] text-ink-muted">Projeto: <b>{r.project_name}</b></p>
+      <Controller control={form.control} name="competence" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Competência</FieldLabel><Input id={field.name} type="month" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="etapa" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Etapa da cobrança</FieldLabel>
+          <Select value={field.value || "__nenhuma__"} onValueChange={(v) => field.onChange(v === "__nenhuma__" ? "" : v)}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: string) => (v === "__nenhuma__" ? "—" : opcoesHub.find((e) => e.id === v)?.display_label ?? v)}</SelectValue></SelectTrigger><SelectContent><SelectItem value="__nenhuma__">—</SelectItem>{opcoesHub.map((e) => <SelectItem key={e.id} value={e.id}>{e.display_label}</SelectItem>)}</SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <CampoNum name="pp" label="Previsto Projeto" /><CampoNum name="pi" label="Previsto Innovatis" /><CampoNum name="rp" label="Recebido Projeto" /><CampoNum name="ri" label="Recebido Innovatis" />
+      <Controller control={form.control} name="reason" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Motivo</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="action" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Ação</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="deadline" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Prazo</FieldLabel><Input id={field.name} type="date" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="flag" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>FLAG</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="origin" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Origem</FieldLabel>
+          <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: keyof typeof ORIGIN_LABEL) => ORIGIN_LABEL[v]}</SelectValue></SelectTrigger><SelectContent>{ORIGENS.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Controller control={form.control} name="provisional" render={({ field }) => (
+        <label className="flex items-center gap-2 self-end pb-2 text-[12px]"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Provisório</label>
+      )} />
+      <div className="col-span-2"><Erro msg={erro} /><div className="mt-4 flex justify-end"><Button type="submit" disabled={pending}>{pending ? "Criando…" : "Criar"}</Button></div></div>
+    </form>
+  );
 }
 function FormMotivo({ texto, rotulo, erro, pending, onSalvar, danger }: { texto: string; rotulo: string; erro: string | null; pending: boolean; onSalvar: (m: string) => void; danger?: boolean }) {
   const [m, setM] = useState("");
