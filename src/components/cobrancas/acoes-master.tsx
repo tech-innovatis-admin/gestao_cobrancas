@@ -114,14 +114,31 @@ function FormFase({ atual, erro, pending, onSalvar }: { atual: string | null; er
   );
 }
 function FormSituacao({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (s: "active" | "backlog" | "lost", j: string | null, f: string | null) => void }) {
-  const [s, setS] = useState<"active" | "backlog" | "lost">(r.project_status === "archived" ? "active" : r.project_status); const [j, setJ] = useState(""); const [f, setF] = useState(r.stage_code ?? "");
-  const reativandoPerdido = r.project_status === "lost" && s === "active";
-  return (<div className="space-y-3">
-    <L t="Situação"><select className="field mt-0.5" value={s} onChange={(e) => setS(e.target.value as typeof s)}><option value="active">Ativo</option><option value="backlog">Backlog</option><option value="lost">Perdido</option></select></L>
-    {reativandoPerdido && <L t="Confirmar fase (obrigatório ao reativar um perdido)"><select className="field mt-0.5" value={f} onChange={(e) => setF(e.target.value)}><option value="">—</option>{["A", "B", "C", "D"].map((x) => <option key={x}>{x}</option>)}</select></L>}
-    <L t={reativandoPerdido ? "Justificativa (obrigatória)" : "Justificativa"}><textarea className="field mt-0.5 h-14 py-1.5" value={j} onChange={(e) => setJ(e.target.value)} /></L>
-    <p className="text-[11px] text-ink-faint">A fase é preservada; Backlog e Perdido saem dos totais ativos, mas continuam consultáveis.</p>
-    <Rodape erro={erro} pending={pending} onSalvar={() => onSalvar(s, j || null, f || null)} /></div>);
+  const statusOriginal = r.project_status === "archived" ? "active" : r.project_status;
+  const schema = alterarSituacaoSchema(r.project_status);
+  const form = useForm<AlterarSituacaoInput>({ resolver: zodResolver(schema), defaultValues: { status: statusOriginal, justification: "", stage_code: r.stage_code ?? "" } });
+  const status = form.watch("status");
+  const reativandoPerdido = r.project_status === "lost" && status === "active";
+  const onValid = (d: AlterarSituacaoInput) => onSalvar(d.status, d.justification || null, d.stage_code || null);
+  return (
+    <form onSubmit={form.handleSubmit(onValid)} className="space-y-3">
+      <Controller control={form.control} name="status" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Situação</FieldLabel>
+          <Select value={field.value} onValueChange={field.onChange}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: "active" | "backlog" | "lost") => ({ active: "Ativo", backlog: "Backlog", lost: "Perdido" }[v])}</SelectValue></SelectTrigger><SelectContent><SelectItem value="active">Ativo</SelectItem><SelectItem value="backlog">Backlog</SelectItem><SelectItem value="lost">Perdido</SelectItem></SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      {reativandoPerdido && <Controller control={form.control} name="stage_code" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Confirmar fase (obrigatório ao reativar um perdido)</FieldLabel>
+          <Select value={field.value || "__nenhuma__"} onValueChange={(v) => field.onChange(v === "__nenhuma__" ? "" : v)}><SelectTrigger id={field.name} className="w-full" aria-invalid={!!fieldState.error}><SelectValue>{(v: string) => (v === "__nenhuma__" ? "—" : v)}</SelectValue></SelectTrigger><SelectContent><SelectItem value="__nenhuma__">—</SelectItem>{["A", "B", "C", "D"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select>
+          <FieldError errors={[fieldState.error]} /></Field>
+      )} />}
+      <Controller control={form.control} name="justification" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>{reativandoPerdido ? "Justificativa (obrigatória)" : "Justificativa"}</FieldLabel><Textarea id={field.name} aria-invalid={!!fieldState.error} {...field} value={field.value ?? ""} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <p className="text-[11px] text-ink-faint">A fase é preservada; Backlog e Perdido saem dos totais ativos, mas continuam consultáveis.</p>
+      <Erro msg={erro} /><div className="mt-4 flex justify-end"><Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button></div>
+    </form>
+  );
 }
 const Num = ({ t, v, set }: { t: string; v: string; set: (s: string) => void }) => <L t={t}><input className="field num mt-0.5 text-right" value={v} onChange={(e) => set(e.target.value)} /></L>;
 function FormValores({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { planned_project: number; planned_innovatis: number; received_project: number; received_innovatis: number; competence: string; flag: string | null; origin: Receivable["origin"]; provisional: boolean; legacy_consolidated: boolean; justification: string | null }) => void }) {
