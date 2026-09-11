@@ -1,5 +1,7 @@
 # Cobranças — Filtros, Tabela e Drawer — Migração visual para shadcn/ui — Implementation Plan
 
+**Status: ✅ Concluído** (2026-09-11) — todas as 8 tasks implementadas e revisadas (spec + qualidade + teste funcional real no navegador). Dois bugs reais encontrados e corrigidos durante a implementação: (1) `.num`/`.fix`/cabeçalho sticky presos dentro de `@utility tbl`, quebrando em toda tabela já migrada (commit `8a28433`); (2) schema zod exportado de um arquivo `"use server"`, quebrando `/cobrancas` em runtime (commit `24e5868`). `npm run typecheck`/`lint`/`test` limpos; o único erro restante em todo o projeto está em `src/components/cobrancas/acoes-master.tsx` (último sub-projeto).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrar a tela de Cobranças (exceto o painel "Ações do Master Admin", que é o próximo/último sub-projeto) pro shadcn/ui: botões de filtro rápido, a tabela principal (22 colunas), paginação, o painel lateral de detalhes (`Drawer`→`Sheet`), histórico, o formulário operacional (com sua lógica própria de diff/conflito) e o formulário de novo projeto.
