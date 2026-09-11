@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Modal } from "@/components/ui/modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Erro, Pendente } from "@/components/ui/basicos";
 import { fmtBRL, parseBRL } from "@/lib/format";
@@ -37,14 +37,14 @@ export const AcoesMaster = ({ r, etapas, onFeito }: { r: Receivable; etapas: Col
       </div>
       <p className="text-[11px] text-ink-faint">Vincular e sincronizar: <Pendente /></p>
 
-      <Modal aberto={acao === "cadastro"} titulo="Editar cadastro do projeto" onFechar={fechar}><FormCadastro r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => editarProjeto(r.project_id, d))} /></Modal>
-      <Modal aberto={acao === "fase"} titulo="Alterar Fase do projeto" onFechar={fechar} largura="max-w-md"><FormFase atual={r.stage_code} erro={erro} pending={pending} onSalvar={(f, j) => exec(() => alterarFase(r.project_id, f, j))} /></Modal>
-      <Modal aberto={acao === "situacao"} titulo="Alterar Situação do projeto" onFechar={fechar} largura="max-w-md"><FormSituacao r={r} erro={erro} pending={pending} onSalvar={(s, j, f) => exec(() => alterarSituacao(r.project_id, s, j, f))} /></Modal>
-      <Modal aberto={acao === "valores"} titulo="Editar valores" onFechar={fechar}><FormValores r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => salvarFinanceiro({ id: r.id, ...d }))} /></Modal>
-      <Modal aberto={acao === "recebimento"} titulo="Registrar recebimento" onFechar={fechar}><FormRecebimento r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => registrarRecebimento({ id: r.id, ...d }))} /></Modal>
-      <Modal aberto={acao === "parcela"} titulo="Nova parcela / recebível" onFechar={fechar}><FormParcela r={r} etapas={etapas} erro={erro} pending={pending} onSalvar={(d) => exec(() => criarRecebivel({ project_id: r.project_id, ...d }))} /></Modal>
-      <Modal aberto={acao === "excluir"} titulo="Excluir da gestão" onFechar={fechar} largura="max-w-md"><FormMotivo texto={`O projeto "${r.project_name}" e todos os seus recebíveis deixarão de aparecer em dashboards, totais, cobranças e filtros. O histórico é preservado e o projeto pode ser restaurado.`} rotulo="Confirmar exclusão" erro={erro} pending={pending} onSalvar={(m) => exec(() => excluirDaGestao(r.project_id, m))} danger /></Modal>
-      <Modal aberto={acao === "restaurar"} titulo="Restaurar projeto" onFechar={fechar} largura="max-w-md"><p className="text-[13px]">Restaurar &quot;{r.project_name}&quot; e seus recebíveis para a operação ativa?</p><Erro msg={erro} /><div className="mt-4 flex justify-end gap-2"><Button variant="outline" onClick={fechar}>Cancelar</Button><Button disabled={pending} onClick={() => exec(() => restaurarProjeto(r.project_id))}>Restaurar</Button></div></Modal>
+      <Dialog open={acao === "cadastro"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Editar cadastro do projeto</DialogTitle></DialogHeader><FormCadastro r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => editarProjeto(r.project_id, d))} /></DialogContent></Dialog>
+      <Dialog open={acao === "fase"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Alterar Fase do projeto</DialogTitle></DialogHeader><FormFase atual={r.stage_code} erro={erro} pending={pending} onSalvar={(f, j) => exec(() => alterarFase(r.project_id, f, j))} /></DialogContent></Dialog>
+      <Dialog open={acao === "situacao"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Alterar Situação do projeto</DialogTitle></DialogHeader><FormSituacao r={r} erro={erro} pending={pending} onSalvar={(s, j, f) => exec(() => alterarSituacao(r.project_id, s, j, f))} /></DialogContent></Dialog>
+      <Dialog open={acao === "valores"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Editar valores</DialogTitle></DialogHeader><FormValores r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => salvarFinanceiro({ id: r.id, ...d }))} /></DialogContent></Dialog>
+      <Dialog open={acao === "recebimento"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Registrar recebimento</DialogTitle></DialogHeader><FormRecebimento r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => registrarRecebimento({ id: r.id, ...d }))} /></DialogContent></Dialog>
+      <Dialog open={acao === "parcela"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Nova parcela / recebível</DialogTitle></DialogHeader><FormParcela r={r} etapas={etapas} erro={erro} pending={pending} onSalvar={(d) => exec(() => criarRecebivel({ project_id: r.project_id, ...d }))} /></DialogContent></Dialog>
+      <Dialog open={acao === "excluir"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Excluir da gestão</DialogTitle></DialogHeader><FormMotivo texto={`O projeto "${r.project_name}" e todos os seus recebíveis deixarão de aparecer em dashboards, totais, cobranças e filtros. O histórico é preservado e o projeto pode ser restaurado.`} rotulo="Confirmar exclusão" erro={erro} pending={pending} onSalvar={(m) => exec(() => excluirDaGestao(r.project_id, m))} danger /></DialogContent></Dialog>
+      <Dialog open={acao === "restaurar"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Restaurar projeto</DialogTitle></DialogHeader><p className="text-[13px]">Restaurar &quot;{r.project_name}&quot; e seus recebíveis para a operação ativa?</p><Erro msg={erro} /><div className="mt-4 flex justify-end gap-2"><Button variant="outline" onClick={fechar}>Cancelar</Button><Button disabled={pending} onClick={() => exec(() => restaurarProjeto(r.project_id))}>Restaurar</Button></div></DialogContent></Dialog>
     </section>
   );
 };
