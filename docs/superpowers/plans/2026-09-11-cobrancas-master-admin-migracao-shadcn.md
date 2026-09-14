@@ -1,5 +1,7 @@
 # Cobranças — Ações do Master Admin — Migração visual para shadcn/ui — Implementation Plan
 
+**Status: ✅ Concluído** (2026-09-14) — todas as 10 tasks implementadas e revisadas (spec + qualidade + teste funcional real no navegador, incluindo os 2 fluxos de validação condicional e o ciclo completo de arquivar/restaurar). Um bug real de UX encontrado e corrigido durante a implementação: `Dialog` aninhado dentro de `Sheet` não renderizava seu próprio backdrop, então clique fora não fechava o modal interno (commit `5536564`, fix aplicado no componente compartilhado `dialog.tsx`). **Este era o último sub-projeto da migração visual completa — `npm run lint`/`typecheck`/`test`/`build` agora passam 100% limpos em todo o projeto**, pela primeira vez desde o início da iniciativa.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrar `src/components/cobrancas/acoes-master.tsx` (painel de ações do Master Admin — 7 formulários em modais) pro shadcn/ui: `Modal` customizado → `Dialog`, `<select>`/`<input>`/`<textarea>` → `Select`/`Input`/`Textarea` + react-hook-form+zod, `Button variant="danger"/"primary"` → `"destructive"/"default"`. **Este é o último sub-projeto** — ao final, `npm run lint`/`typecheck`/`test`/`build` devem passar 100% limpos em todo o projeto.
