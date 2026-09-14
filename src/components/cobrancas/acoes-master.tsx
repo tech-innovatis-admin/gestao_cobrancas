@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
+import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Erro, Pendente } from "@/components/ui/basicos";
 import { fmtBRL, parseBRL } from "@/lib/format";
@@ -36,7 +36,7 @@ export const AcoesMaster = ({ r, etapas, onFeito }: { r: Receivable; etapas: Col
           <Button size="sm" variant="outline" onClick={() => setAcao("valores")}>Editar valores</Button>
           <Button size="sm" variant="outline" onClick={() => setAcao("recebimento")}>Registrar recebimento</Button>
           <Button size="sm" variant="outline" onClick={() => setAcao("parcela")}>Criar nova parcela</Button>
-          <Button size="sm" variant="danger" onClick={() => setAcao("excluir")}>Excluir da gestão</Button>
+          <Button size="sm" variant="destructive" onClick={() => setAcao("excluir")}>Excluir da gestão</Button>
         </>}
         {arquivado && <Button size="sm" onClick={() => setAcao("restaurar")}>Restaurar</Button>}
         <span title="Disponível após a importação da base financeira (FASE 3)"><Button size="sm" variant="ghost" disabled>Vincular a registro oficial</Button></span>
@@ -55,9 +55,6 @@ export const AcoesMaster = ({ r, etapas, onFeito }: { r: Receivable; etapas: Col
     </section>
   );
 };
-
-const Rodape = ({ erro, pending, onSalvar, rotulo = "Salvar", danger }: { erro: string | null; pending: boolean; onSalvar: () => void; rotulo?: string; danger?: boolean }) => (<><Erro msg={erro} /><div className="mt-4 flex justify-end"><Button variant={danger ? "danger" : "primary"} disabled={pending} onClick={onSalvar}>{pending ? "Salvando…" : rotulo}</Button></div></>);
-const L = ({ t, children, c }: { t: string; children: React.ReactNode; c?: string }) => <label className={`lbl ${c ?? ""}`}>{t}{children}</label>;
 
 function FormCadastro({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: EditarProjetoInput) => void }) {
   const form = useForm<EditarProjetoInput>({ resolver: zodResolver(editarProjetoSchema), defaultValues: { name: r.project_name, hub: r.hub, ministry_government: r.ministry_government ?? "", institute: r.institute ?? "", foundation: r.foundation ?? "", origin: r.project_origin, provisional: r.project_provisional, notes: "" } });
@@ -140,7 +137,6 @@ function FormSituacao({ r, erro, pending, onSalvar }: { r: Receivable; erro: str
     </form>
   );
 }
-const Num = ({ t, v, set }: { t: string; v: string; set: (s: string) => void }) => <L t={t}><input className="field num mt-0.5 text-right" value={v} onChange={(e) => set(e.target.value)} /></L>;
 function FormValores({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { planned_project: number; planned_innovatis: number; received_project: number; received_innovatis: number; competence: string; flag: string | null; origin: Receivable["origin"]; provisional: boolean; legacy_consolidated: boolean; justification: string | null }) => void }) {
   const s = (n: number | string) => Number(n).toFixed(2).replace(".", ",");
   const form = useForm<FinanceiroFormInput>({ resolver: zodResolver(financeiroFormSchema), defaultValues: { pp: s(r.planned_project), pi: s(r.planned_innovatis), rp: s(r.received_project), ri: s(r.received_innovatis), competence: r.competence, flag: r.flag ?? "", origin: r.origin, provisional: r.provisional, legacy_consolidated: r.legacy_consolidated, justification: "" } });
@@ -265,6 +261,15 @@ function FormParcela({ r, etapas, erro, pending, onSalvar }: { r: Receivable; et
   );
 }
 function FormMotivo({ texto, rotulo, erro, pending, onSalvar, danger }: { texto: string; rotulo: string; erro: string | null; pending: boolean; onSalvar: (m: string) => void; danger?: boolean }) {
-  const [m, setM] = useState("");
-  return (<div className="space-y-3"><p className="text-[13px]">{texto}</p><L t="Motivo (obrigatório)"><textarea className="field mt-0.5 h-16 py-1.5" value={m} onChange={(e) => setM(e.target.value)} /></L><Rodape erro={erro} pending={pending || !m.trim()} rotulo={rotulo} danger={danger} onSalvar={() => onSalvar(m)} /></div>);
+  const form = useForm<MotivoInput>({ resolver: zodResolver(motivoSchema), defaultValues: { motivo: "" } });
+  const onValid = (d: MotivoInput) => onSalvar(d.motivo);
+  return (
+    <form onSubmit={form.handleSubmit(onValid)} className="space-y-3">
+      <p className="text-[13px]">{texto}</p>
+      <Controller control={form.control} name="motivo" render={({ field, fieldState }) => (
+        <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Motivo (obrigatório)</FieldLabel><Textarea id={field.name} className="h-16" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
+      )} />
+      <Erro msg={erro} /><div className="mt-4 flex justify-end"><Button type="submit" variant={danger ? "destructive" : "default"} disabled={pending}>{pending ? "Salvando…" : rotulo}</Button></div>
+    </form>
+  );
 }
