@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { ReceivablesSourceAdapter, ImportPreview, ImportResult, OperationalFields, FinancialFields, SourceStatus } from "./types";
+import type { ReceivablesSourceAdapter, ImportPreview, ImportResult, InitializeResult, SourceStatus } from "./types";
 import type { Receivable } from "@/types/domain";
 
 /**
@@ -21,6 +21,7 @@ export const googleSheetsLegacyAdapter: ReceivablesSourceAdapter = {
     try { return await invoke<SourceStatus>("google-sheets-health-check"); }
     catch (e) { return { configured: false, healthy: false, message: `Configuração pendente: ${(e as Error).message}` }; }
   },
+  initialize: () => invoke<InitializeResult>("initialize-google-sheets"),
   previewImport: () => invoke<ImportPreview>("preview-google-sheets-import"),
   importData: () => invoke<ImportResult>("import-google-sheets"),
   synchronize: () => invoke<ImportResult>("synchronize-google-sheets"),

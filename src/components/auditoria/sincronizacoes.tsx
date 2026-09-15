@@ -1,6 +1,7 @@
 import { Pendente } from "@/components/ui/basicos";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ExecutarCargaInicial } from "@/components/auditoria/executar-carga-inicial";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtDataHora } from "@/lib/format";
 import type { SyncRun } from "@/types/domain";
@@ -11,7 +12,7 @@ export const Sincronizacoes = ({ runs, fila, fonte }: { runs: SyncRun[]; fila: n
       <div className="flex flex-wrap items-center gap-3 text-[13px]">
         <span className="font-semibold">Google Sheets</span>{fonte.configured ? <Badge variant={fonte.healthy ? "ok" : "danger"}>{fonte.healthy ? "Acessível" : "Erro"}</Badge> : <Pendente />}<span className="text-ink-muted">{fonte.message}</span>
         <span className="ml-auto text-ink-muted">Pendentes na fila: <b className="num">{fila}</b></span>
-        <Button size="sm" disabled>Sincronizar agora</Button><Button size="sm" variant="outline" disabled>Tentar novamente</Button>
+        <ExecutarCargaInicial /><Button size="sm" variant="outline" disabled>Tentar novamente</Button>
       </div>
       <p className="mt-2 text-[11.5px] text-ink-faint">Sincronização, importação e write-back são implementados nas Edge Functions da FASE 3 (health-check, preview, initialize, import, synchronize, process-sync-queue, resolve-sync-conflict). Secrets necessários: <code>GOOGLE_SERVICE_ACCOUNT_JSON</code>, <code>GOOGLE_SPREADSHEET_ID</code>.</p>
     </div>

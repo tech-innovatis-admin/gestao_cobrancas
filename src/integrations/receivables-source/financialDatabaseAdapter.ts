@@ -4,6 +4,6 @@ const naoImplementado = () => { throw new Error("FinancialDatabaseAdapter ainda 
 export const financialDatabaseAdapter: ReceivablesSourceAdapter = {
   name: "FinancialDatabaseAdapter",
   healthCheck: async () => ({ configured: false, healthy: false, message: "Não implementado nesta versão." }),
-  previewImport: naoImplementado, importData: naoImplementado, synchronize: naoImplementado,
+  initialize: naoImplementado, previewImport: naoImplementado, importData: naoImplementado, synchronize: naoImplementado,
   getReceivables: naoImplementado, updateOperationalFields: naoImplementado, updateFinancialFields: naoImplementado,
 };
