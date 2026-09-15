@@ -39,5 +39,24 @@ export async function sheetsGet<T>(cfg: GoogleConfig, token: string, path: strin
   return res.json();
 }
 
+export async function sheetsValuesBatchUpdate(cfg: GoogleConfig, token: string, data: { range: string; values: string[][] }[]): Promise<void> {
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cfg.spreadsheetId}/values:batchUpdate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ valueInputOption: "RAW", data }),
+  });
+  if (!res.ok) throw new Error(`Sheets API ${res.status}: ${await res.text()}`);
+}
+
+export async function sheetsBatchUpdate(cfg: GoogleConfig, token: string, requests: unknown[]): Promise<{ replies?: unknown[] }> {
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${cfg.spreadsheetId}:batchUpdate`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ requests }),
+  });
+  if (!res.ok) throw new Error(`Sheets API ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
