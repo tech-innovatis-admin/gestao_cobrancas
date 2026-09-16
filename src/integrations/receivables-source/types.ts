@@ -9,6 +9,8 @@ export interface InitializeResult { runId: string; sheetsProcessed: number; idsC
 export interface OperationalFields { collection_status_id: string | null; responsible_user_id: string | null; responsible_legacy_name: string | null; operational_deadline: string | null; reason: string | null; action: string | null; }
 export interface FinancialFields { planned_project: number; planned_innovatis: number; received_project: number; received_innovatis: number; }
 export interface SourceStatus { configured: boolean; healthy: boolean; message: string; }
+export interface QueueResult { processed: number; errors: number; remaining: number; }
+export type ConflictResolution = "keep_platform" | "keep_sheet";
 
 export interface ReceivablesSourceAdapter {
   readonly name: string;
@@ -20,4 +22,6 @@ export interface ReceivablesSourceAdapter {
   getReceivables(): Promise<Receivable[]>;
   updateOperationalFields(receivableId: string, fields: OperationalFields): Promise<void>;
   updateFinancialFields(receivableId: string, fields: FinancialFields): Promise<void>;
+  retryQueue(): Promise<QueueResult>;
+  resolveConflict(receivableId: string, resolution: ConflictResolution): Promise<{ ok: boolean }>;
 }

@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { ReceivablesSourceAdapter, ImportPreview, ImportResult, InitializeResult, SourceStatus } from "./types";
+import type { ReceivablesSourceAdapter, ImportPreview, ImportResult, InitializeResult, SourceStatus, QueueResult, ConflictResolution } from "./types";
 import type { Receivable } from "@/types/domain";
 
 /**
@@ -33,4 +33,7 @@ export const googleSheetsLegacyAdapter: ReceivablesSourceAdapter = {
   },
   updateOperationalFields: (id, fields) => invoke<void>("update-receivable-operational", { id, ...fields }),
   updateFinancialFields: (id, fields) => invoke<void>("update-receivable-financial", { id, ...fields }),
+  retryQueue: () => invoke<QueueResult>("process-sync-queue"),
+  resolveConflict: (receivableId: string, resolution: ConflictResolution) =>
+    invoke<{ ok: boolean }>("resolve-sync-conflict", { receivable_id: receivableId, resolution }),
 };
