@@ -4,26 +4,8 @@
 // classifica fase e conta IDs presentes/ausentes/duplicados. Não escreve nada.
 import { requireMasterAdmin } from "../_shared/auth.ts";
 import { accessToken, json, loadConfig, sheetsGet } from "../_shared/google.ts";
+import { FASES, parseSheetRows, type RangeSheet } from "../_shared/sheetParser.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-interface CellRow { values?: { formattedValue?: string }[] }
-interface RangeSheet { data?: { rowData?: CellRow[] }[] }
-
-const COL = { tipo: 0, hub: 1, min: 2, inst: 3, fund: 4, nome: 5, plProjeto: 6, plInnovatis: 7,
-  status: 8, motivo: 9, acao: 10, responsavel: 11, prazo: 12, arProjeto: 13, arInnovatis: 14, flag: 15, statusCalc: 16, idCobranca: 17 };
-const FASES = new Set(["A", "B", "C", "D"]);
-
-function cell(row: CellRow | undefined, idx: number): string {
-  return row?.values?.[idx]?.formattedValue?.trim() ?? "";
-}
-function isBlankRow(row: CellRow | undefined): boolean {
-  return !row?.values?.some((v) => v.formattedValue?.trim());
-}
-function parseBRL(s: string): number | null {
-  if (!s) return null;
-  const n = Number(s.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
 
 Deno.serve(async (req) => {
   try { await requireMasterAdmin(req); } catch (e) { return json({ error: (e as Error).message }, 401); }
@@ -66,30 +48,23 @@ Deno.serve(async (req) => {
     const rows = sheet?.data?.[0]?.rowData ?? [];
 
     // Linha 0 é o cabeçalho. Cada projeto ocupa 1 linha "prevista" (Tipo preenchido) + opcionalmente
-    // 1 linha "recebida" logo abaixo (sem Tipo; pode vir em branco quando nada foi recebido ainda).
-    // O bloco de totais no fim da aba (coluna Fundação = "TOTAL A/B/C") encerra a leitura da aba.
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (isBlankRow(row)) continue;
-      const tipo = cell(row, COL.tipo);
-      if (!tipo) {
-        if (cell(row, COL.fund).toUpperCase().startsWith("TOTAL")) break;
-        result.issues.push(`Aba "${sm.sheet_name}", linha ${i + 1}: sem Tipo e fora de um par esperado — ignorada.`);
+    // 1 linha "recebida" logo abaixo. O bloco de totais no fim da aba encerra a leitura (ver sheetParser.ts).
+    const { projects, orphanRows } = parseSheetRows(rows);
+
+    // Mescla órfãs e projetos em ordem de linha, para manter as mensagens de issue na mesma ordem
+    // em que apareceriam varrendo a aba de cima para baixo (comportamento anterior).
+    let oi = 0, pi = 0;
+    while (oi < orphanRows.length || pi < projects.length) {
+      const orphanIdx = oi < orphanRows.length ? orphanRows[oi] : Infinity;
+      const projIdx = pi < projects.length ? projects[pi].rowIndex : Infinity;
+      if (orphanIdx < projIdx) {
+        result.issues.push(`Aba "${sm.sheet_name}", linha ${orphanIdx + 1}: sem Tipo e fora de um par esperado — ignorada.`);
+        oi++;
         continue;
       }
 
-      const plProjeto = parseBRL(cell(row, COL.plProjeto));
-      const plInnovatis = parseBRL(cell(row, COL.plInnovatis));
-      const arProjetoPlanilha = parseBRL(cell(row, COL.arProjeto));
-      const idCobranca = cell(row, COL.idCobranca);
-
-      let recProjeto = 0, recInnovatis = 0;
-      const next = rows[i + 1];
-      if (next && !isBlankRow(next) && !cell(next, COL.tipo) && !cell(next, COL.fund).toUpperCase().startsWith("TOTAL")) {
-        recProjeto = parseBRL(cell(next, COL.plProjeto)) ?? 0;
-        recInnovatis = parseBRL(cell(next, COL.plInnovatis)) ?? 0;
-        i++; // consome a linha de recebido
-      }
+      const p = projects[pi]; pi++;
+      const { tipo, plProjeto, plInnovatis, arProjetoPlanilha, idCobranca, recProjeto } = p;
 
       if (FASES.has(tipo) || mappedCodes.has(tipo)) result.stagesFound[tipo] = (result.stagesFound[tipo] ?? 0) + 1;
       else unmapped.set(tipo, (unmapped.get(tipo) ?? 0) + 1);
@@ -97,8 +72,8 @@ Deno.serve(async (req) => {
       if (plProjeto != null && arProjetoPlanilha != null) {
         const saldoCalculado = Math.max(plProjeto - recProjeto, 0);
         if (Math.abs(saldoCalculado - arProjetoPlanilha) > 0.01) {
-          const nome = cell(row, COL.nome) || "sem nome";
-          result.issues.push(`Aba "${sm.sheet_name}", linha ${i + 1} (${nome}): saldo da planilha (R$ ${arProjetoPlanilha.toFixed(2)}) diverge do calculado (R$ ${saldoCalculado.toFixed(2)}).`);
+          const nome = p.nome || "sem nome";
+          result.issues.push(`Aba "${sm.sheet_name}", linha ${p.rowIndex + 1} (${nome}): saldo da planilha (R$ ${arProjetoPlanilha.toFixed(2)}) diverge do calculado (R$ ${saldoCalculado.toFixed(2)}).`);
         }
       }
 

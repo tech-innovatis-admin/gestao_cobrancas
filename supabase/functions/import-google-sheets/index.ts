@@ -6,41 +6,8 @@
 import { requireMasterAdmin } from "../_shared/auth.ts";
 import { accessToken, json, loadConfig, sheetsGet } from "../_shared/google.ts";
 import { computeSourceHash } from "../_shared/hash.ts";
+import { buildHashFields, FASES, normalizeText, parseDate, parseSheetRows, type RangeSheet } from "../_shared/sheetParser.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-interface CellRow { values?: { formattedValue?: string }[] }
-interface RangeSheet { data?: { rowData?: CellRow[] }[] }
-
-const COL = { tipo: 0, hub: 1, min: 2, inst: 3, fund: 4, nome: 5, plProjeto: 6, plInnovatis: 7,
-  status: 8, motivo: 9, acao: 10, responsavel: 11, prazo: 12, arProjeto: 13, arInnovatis: 14, flag: 15, statusCalc: 16, idCobranca: 17 };
-const FASES = new Set(["A", "B", "C", "D"]);
-
-function cell(row: CellRow | undefined, idx: number): string {
-  return row?.values?.[idx]?.formattedValue?.trim() ?? "";
-}
-function isBlankRow(row: CellRow | undefined): boolean {
-  return !row?.values?.some((v) => v.formattedValue?.trim());
-}
-function parseBRL(s: string): number | null {
-  if (!s) return null;
-  const n = Number(s.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
-// "Prazo" chega da planilha tipicamente como DD/MM/AAAA (formatação de data do Sheets). Qualquer
-// coisa fora desse padrão vira null em vez de derrubar a linha inteira.
-function parseDate(s: string): string | null {
-  if (!s) return null;
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!m) return null;
-  const [, d, mo, y] = m;
-  const day = Number(d), month = Number(mo), year = Number(y);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-// Equivalente TS de public.normalize_text(): minúsculas, sem acentos, espaços colapsados.
-function normalizeText(t: string): string {
-  return t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
-}
 
 Deno.serve(async (req) => {
   try { await requireMasterAdmin(req); } catch (e) { return json({ error: (e as Error).message }, 401); }
@@ -98,28 +65,14 @@ Deno.serve(async (req) => {
     }
     const rows = sheet?.data?.[0]?.rowData ?? [];
 
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (isBlankRow(row)) continue;
-      const tipo = cell(row, COL.tipo);
-      if (!tipo) {
-        if (cell(row, COL.fund).toUpperCase().startsWith("TOTAL")) break;
-        continue;
-      }
-
-      const topRowNumber = i + 1; // 1-based, para mensagens e source_top_row
-      let receivedRow: CellRow | undefined;
-      let receivedRowNumber: number | null = null;
-      const next = rows[i + 1];
-      if (next && !isBlankRow(next) && !cell(next, COL.tipo) && !cell(next, COL.fund).toUpperCase().startsWith("TOTAL")) {
-        receivedRow = next;
-        receivedRowNumber = i + 2; // 1-based
-        i++; // consome a linha de recebido
-      }
+    const { projects } = parseSheetRows(rows);
+    for (const p of projects) {
+      const topRowNumber = p.rowIndex + 1; // 1-based, para mensagens e source_top_row
+      const receivedRowNumber = p.receivedRowIndex !== null ? p.receivedRowIndex + 1 : null; // 1-based
 
       stats.read++;
 
-      const idCobranca = cell(row, COL.idCobranca);
+      const { tipo, idCobranca } = p;
       if (!idCobranca) {
         stats.errors++;
         issues.push(`Aba "${sm.sheet_name}", linha ${topRowNumber}: sem ID_COBRANCA — rode initialize-google-sheets antes.`);
@@ -137,8 +90,8 @@ Deno.serve(async (req) => {
         if (existingErr) throw existingErr;
         if (existing) { stats.ignored++; continue; }
 
-        const hub = cell(row, COL.hub) as "IFES" | "GOV";
-        const nome = cell(row, COL.nome);
+        const hub = p.hub as "IFES" | "GOV";
+        const nome = p.nome;
         const normalizedNome = normalizeText(nome);
         const cacheKey = `${hub}::${normalizedNome}`;
 
@@ -167,9 +120,9 @@ Deno.serve(async (req) => {
             const { data: newProject, error: projectErr } = await admin.from("projects").insert({
               name: nome,
               hub,
-              ministry_government: cell(row, COL.min) || null,
-              institute: cell(row, COL.inst) || null,
-              foundation: cell(row, COL.fund) || null,
+              ministry_government: p.min || null,
+              institute: p.inst || null,
+              foundation: p.fund || null,
               origin: "google_sheets",
               project_status: "active",
               project_stage_id: stageId,
@@ -182,29 +135,24 @@ Deno.serve(async (req) => {
           }
         }
 
-        const statusTexto = cell(row, COL.status);
+        const statusTexto = p.statusLabel;
         const statusMatch = statusTexto ? statusByKey.get(`${hub}::${normalizeText(statusTexto)}`) : undefined;
         const collectionStatusId = statusMatch?.id ?? null;
 
-        const responsavelTexto = cell(row, COL.responsavel);
+        const responsavelTexto = p.responsavel;
         const responsibleUserId = responsavelTexto ? profileByName.get(normalizeText(responsavelTexto)) ?? null : null;
         const responsibleLegacyName = responsibleUserId ? null : (responsavelTexto || null);
 
-        const plProjeto = parseBRL(cell(row, COL.plProjeto)) ?? 0;
-        const plInnovatis = parseBRL(cell(row, COL.plInnovatis)) ?? 0;
-        const recProjeto = receivedRow ? (parseBRL(cell(receivedRow, COL.plProjeto)) ?? 0) : 0;
-        const recInnovatis = receivedRow ? (parseBRL(cell(receivedRow, COL.plInnovatis)) ?? 0) : 0;
-        const reason = cell(row, COL.motivo) || null;
-        const action = cell(row, COL.acao) || null;
-        const operationalDeadline = parseDate(cell(row, COL.prazo));
-        const flag = cell(row, COL.flag) || null;
+        const plProjeto = p.plProjeto ?? 0;
+        const plInnovatis = p.plInnovatis ?? 0;
+        const recProjeto = p.recProjeto;
+        const recInnovatis = p.recInnovatis;
+        const reason = p.motivo || null;
+        const action = p.acao || null;
+        const operationalDeadline = parseDate(p.prazo);
+        const flag = p.flag || null;
 
-        const sourceHash = await computeSourceHash({
-          idCobranca, hub, nome, tipo, competence,
-          plProjeto, plInnovatis, recProjeto, recInnovatis,
-          statusTexto, reason, action, responsavelTexto,
-          operationalDeadline, flag,
-        });
+        const sourceHash = await computeSourceHash(buildHashFields(p, competence));
 
         const { error: insertErr } = await admin.from("receivables").insert({
           id: idCobranca,

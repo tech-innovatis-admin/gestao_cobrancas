@@ -6,15 +6,8 @@
 // Não apaga nem sobrescreve UUIDs já presentes e iguais nas duas linhas do par.
 import { requireMasterAdmin } from "../_shared/auth.ts";
 import { accessToken, json, loadConfig, sheetsBatchUpdate, sheetsGet, sheetsValuesBatchUpdate } from "../_shared/google.ts";
+import { cell, parseSheetRows, type RangeSheet } from "../_shared/sheetParser.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-interface CellRow { values?: { formattedValue?: string }[] }
-interface RangeSheet { data?: { rowData?: CellRow[] }[] }
-
-// Mesmo layout A..Q usado em preview-google-sheets-import. A coluna de ID (historicamente R,
-// índice 17) é detectada dinamicamente abaixo — nunca assumida por índice fixo.
-const COL = { tipo: 0, hub: 1, min: 2, inst: 3, fund: 4, nome: 5, plProjeto: 6, plInnovatis: 7,
-  status: 8, motivo: 9, acao: 10, responsavel: 11, prazo: 12, arProjeto: 13, arInnovatis: 14, flag: 15, statusCalc: 16 };
 
 const ID_HEADER = "ID_COBRANCA";
 const ID_SEARCH_COLS = 30; // "primeiras ~30 colunas" (A..AD, índices 0..29)
@@ -23,12 +16,6 @@ const ID_FREE_FROM = 17;   // coluna R (0-indexed) em diante, se precisar criar 
 // sheet_competence_map (processa todas de uma vez), então usamos o uuid nulo canônico.
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
-function cell(row: CellRow | undefined, idx: number): string {
-  return row?.values?.[idx]?.formattedValue?.trim() ?? "";
-}
-function isBlankRow(row: CellRow | undefined): boolean {
-  return !row?.values?.some((v) => v.formattedValue?.trim());
-}
 function colLetter(idx0: number): string {
   let n = idx0 + 1, s = "";
   while (n > 0) { const rem = (n - 1) % 26; s = String.fromCharCode(65 + rem) + s; n = Math.floor((n - 1) / 26); }
@@ -117,24 +104,12 @@ Deno.serve(async (req) => {
         }
         const letter = colLetter(idColIdx);
 
-        // Mesma lógica de pareamento de preview-google-sheets-import: linha com Tipo = previsto,
-        // linha imediatamente seguinte sem Tipo (e não "TOTAL") = recebido. Bloco de totais encerra a aba.
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (isBlankRow(row)) continue;
-          const tipo = cell(row, COL.tipo);
-          if (!tipo) {
-            if (cell(row, COL.fund).toUpperCase().startsWith("TOTAL")) break;
-            continue; // linha órfã fora de um par — preview-google-sheets-import já reporta isso
-          }
-
-          const prevRowIndex = i;
-          let recRowIndex: number | null = null;
-          const next = rows[i + 1];
-          if (next && !isBlankRow(next) && !cell(next, COL.tipo) && !cell(next, COL.fund).toUpperCase().startsWith("TOTAL")) {
-            recRowIndex = i + 1;
-            i++; // consome a linha de recebido
-          }
+        // Mesma lógica de pareamento de preview-google-sheets-import (ver sheetParser.ts): linha com
+        // Tipo = previsto, linha imediatamente seguinte sem Tipo (e não "TOTAL") = recebido.
+        const { projects } = parseSheetRows(rows);
+        for (const p of projects) {
+          const prevRowIndex = p.rowIndex;
+          const recRowIndex = p.receivedRowIndex;
           recordsRead++;
 
           const idPrevisto = cell(rows[prevRowIndex], idColIdx);
