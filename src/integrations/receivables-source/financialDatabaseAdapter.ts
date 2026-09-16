@@ -6,4 +6,5 @@ export const financialDatabaseAdapter: ReceivablesSourceAdapter = {
   healthCheck: async () => ({ configured: false, healthy: false, message: "Não implementado nesta versão." }),
   initialize: naoImplementado, previewImport: naoImplementado, importData: naoImplementado, synchronize: naoImplementado,
   getReceivables: naoImplementado, updateOperationalFields: naoImplementado, updateFinancialFields: naoImplementado,
+  retryQueue: naoImplementado, resolveConflict: naoImplementado,
 };
