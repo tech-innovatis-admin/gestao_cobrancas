@@ -20,7 +20,7 @@ export const Topbar = async ({ titulo, perfil, extra }: { titulo: string; perfil
   const [variant, label] = syncVariantByStatus[s.status] ?? ["secondary", s.status];
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background px-6">
-      <div className="flex items-center gap-4"><h1 className="text-[16px] font-semibold text-foreground">{titulo}</h1>{extra}</div>
+      <div className="flex items-center gap-4"><h1 className="text-[16px] font-semibold text-foreground uppercase tracking-wide">{titulo}</h1>{extra}</div>
       <div className="flex items-center gap-5">
         <div className="text-right text-[11px] text-muted-foreground">Última sincronização<div className="flex items-center justify-end gap-1.5 text-foreground"><Badge variant={variant}>{label}</Badge>{s.finished_at && <span>{fmtDataHora(s.finished_at)}</span>}</div></div>
         <div className="text-right leading-tight"><div className="text-[13px] font-medium">{perfil.full_name}</div><div className="text-[11px] text-muted-foreground">{perfil.email} · {ROLE_LABEL[perfil.role]}</div></div>

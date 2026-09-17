@@ -16,7 +16,7 @@ export const Sidebar = ({ role }: { role: AppRole }) => {
       <div className="border-b border-sidebar-border px-5 py-5"><div className="text-[15px] font-bold tracking-wide">INNOVATIS</div><div className="text-[12px] text-muted-foreground">Gestão de Cobranças</div></div>
       <nav className="flex-1 px-3 py-4">
         {itens.filter((i) => !i.master || role === "master_admin").map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href} className={cn("mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px]", path.startsWith(href) ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground")}><Icon size={15} strokeWidth={1.75} />{label}</Link>
+          <Link key={href} href={href} className={cn("mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] uppercase tracking-wide", path.startsWith(href) ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground")}><Icon size={15} strokeWidth={1.75} />{label}</Link>
         ))}
       </nav>
       <div className="border-t border-sidebar-border px-5 py-3 text-[11px] text-muted-foreground">V0 · uso interno</div>

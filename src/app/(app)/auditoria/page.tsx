@@ -24,7 +24,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
     <Tabs value={tab}>
       <TabsList>
         {TABS.map((t) => (
-          <TabsTrigger key={t.id} value={t.id} nativeButton={false} render={<Link href={`/auditoria?tab=${t.id}`} />}>
+          <TabsTrigger key={t.id} value={t.id} nativeButton={false} className="uppercase tracking-wide" render={<Link href={`/auditoria?tab=${t.id}`} />}>
             {t.label}
           </TabsTrigger>
         ))}
