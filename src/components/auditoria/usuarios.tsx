@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller, type Control, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -53,55 +53,64 @@ export const Usuarios = ({ perfis, responsaveisLegados }: { perfis: Profile[]; r
       </TableBody></Table>
     </div>
 
-    <Modal aberto={modal === "novo"} titulo="Criar usuário" onFechar={() => setModal(null)} largura="max-w-md">
-      <form onSubmit={novoForm.handleSubmit((data) => run(() => criarUsuarioAction(data), `Usuário ${data.email} criado.`))}>
-        <FieldGroup>
-          <Controller control={novoForm.control} name="full_name" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
-          )} />
-          <Controller control={novoForm.control} name="email" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>E-mail</FieldLabel><Input id={field.name} type="email" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
-          )} />
-          <CampoPerfil control={novoForm.control} />
-          <Controller control={novoForm.control} name="senha_temporaria" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
-          )} />
-          <p className="text-[11px] text-ink-faint">O usuário deverá trocar a senha no primeiro acesso. A senha temporária não será exibida novamente — copie-a agora.</p>
-          <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Criar</Button></div>
-        </FieldGroup>
-      </form>
-    </Modal>
+    <Dialog open={modal === "novo"} onOpenChange={(o) => !o && setModal(null)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Criar usuário</DialogTitle></DialogHeader>
+        <form onSubmit={novoForm.handleSubmit((data) => run(() => criarUsuarioAction(data), `Usuário ${data.email} criado.`))}>
+          <FieldGroup>
+            <Controller control={novoForm.control} name="full_name" render={({ field, fieldState }) => (
+              <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
+            )} />
+            <Controller control={novoForm.control} name="email" render={({ field, fieldState }) => (
+              <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>E-mail</FieldLabel><Input id={field.name} type="email" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
+            )} />
+            <CampoPerfil control={novoForm.control} />
+            <Controller control={novoForm.control} name="senha_temporaria" render={({ field, fieldState }) => (
+              <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
+            )} />
+            <p className="text-[11px] text-ink-faint">O usuário deverá trocar a senha no primeiro acesso. A senha temporária não será exibida novamente — copie-a agora.</p>
+            <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Criar</Button></div>
+          </FieldGroup>
+        </form>
+      </DialogContent>
+    </Dialog>
 
-    <Modal aberto={modal === "editar"} titulo={`Editar ${alvo?.full_name ?? ""}`} onFechar={() => setModal(null)} largura="max-w-md">
-      <form onSubmit={editarForm.handleSubmit((data) => run(() => atualizarPerfilAction(data), "Usuário atualizado."))}>
-        <FieldGroup>
-          <Controller control={editarForm.control} name="full_name" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
-          )} />
-          <CampoPerfil control={editarForm.control} />
-          <Controller control={editarForm.control} name="active" render={({ field }) => (
-            <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Ativo</label>
-          )} />
-          <Controller control={editarForm.control} name="legacy_responsible_name" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Vincular a responsável legado (texto da planilha)</FieldLabel>
-              <Input id={field.name} name={field.name} ref={field.ref} onBlur={field.onBlur} list="legados" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || null)} aria-invalid={!!fieldState.error} /><datalist id="legados">{responsaveisLegados.map((r) => <option key={r} value={r} />)}</datalist>
-              <FieldError errors={[fieldState.error]} /></Field>
-          )} />
-          <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Salvar</Button></div>
-        </FieldGroup>
-      </form>
-    </Modal>
+    <Dialog open={modal === "editar"} onOpenChange={(o) => !o && setModal(null)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Editar {alvo?.full_name ?? ""}</DialogTitle></DialogHeader>
+        <form onSubmit={editarForm.handleSubmit((data) => run(() => atualizarPerfilAction(data), "Usuário atualizado."))}>
+          <FieldGroup>
+            <Controller control={editarForm.control} name="full_name" render={({ field, fieldState }) => (
+              <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nome</FieldLabel><Input id={field.name} {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
+            )} />
+            <CampoPerfil control={editarForm.control} />
+            <Controller control={editarForm.control} name="active" render={({ field }) => (
+              <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Ativo</label>
+            )} />
+            <Controller control={editarForm.control} name="legacy_responsible_name" render={({ field, fieldState }) => (
+              <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Vincular a responsável legado (texto da planilha)</FieldLabel>
+                <Input id={field.name} name={field.name} ref={field.ref} onBlur={field.onBlur} list="legados" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || null)} aria-invalid={!!fieldState.error} /><datalist id="legados">{responsaveisLegados.map((r) => <option key={r} value={r} />)}</datalist>
+                <FieldError errors={[fieldState.error]} /></Field>
+            )} />
+            <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Salvar</Button></div>
+          </FieldGroup>
+        </form>
+      </DialogContent>
+    </Dialog>
 
-    <Modal aberto={modal === "senha"} titulo={`Resetar senha de ${alvo?.full_name ?? ""}`} onFechar={() => setModal(null)} largura="max-w-md">
-      <form onSubmit={senhaForm.handleSubmit((data) => alvo && run(() => resetarSenhaAction(alvo.user_id, data.senha_temporaria), "Senha resetada."))}>
-        <FieldGroup>
-          <Controller control={senhaForm.control} name="senha_temporaria" render={({ field, fieldState }) => (
-            <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nova senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
-          )} />
-          <p className="text-[11px] text-ink-faint">O usuário será obrigado a trocar a senha no próximo login.</p>
-          <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Resetar</Button></div>
-        </FieldGroup>
-      </form>
-    </Modal>
+    <Dialog open={modal === "senha"} onOpenChange={(o) => !o && setModal(null)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Resetar senha de {alvo?.full_name ?? ""}</DialogTitle></DialogHeader>
+        <form onSubmit={senhaForm.handleSubmit((data) => alvo && run(() => resetarSenhaAction(alvo.user_id, data.senha_temporaria), "Senha resetada."))}>
+          <FieldGroup>
+            <Controller control={senhaForm.control} name="senha_temporaria" render={({ field, fieldState }) => (
+              <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Nova senha temporária (mín. 8)</FieldLabel><Input id={field.name} type="text" autoComplete="off" {...field} aria-invalid={!!fieldState.error} /><FieldError errors={[fieldState.error]} /></Field>
+            )} />
+            <p className="text-[11px] text-ink-faint">O usuário será obrigado a trocar a senha no próximo login.</p>
+            <Erro msg={erro} /><div className="flex justify-end"><Button type="submit" disabled={pending}>Resetar</Button></div>
+          </FieldGroup>
+        </form>
+      </DialogContent>
+    </Dialog>
   </>);
 };
