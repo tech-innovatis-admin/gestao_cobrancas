@@ -5,7 +5,7 @@ import { LayoutDashboard, ListChecks, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AppRole } from "@/types/domain";
 const itens = [
-  { href: "/visao-geral", label: "Visão Geral", icon: LayoutDashboard, master: false },
+  { href: "/visao-geral", label: "Visão Executiva", icon: LayoutDashboard, master: false },
   { href: "/cobrancas", label: "Cobranças", icon: ListChecks, master: false },
   { href: "/auditoria", label: "Auditoria", icon: ShieldCheck, master: true },
 ];
