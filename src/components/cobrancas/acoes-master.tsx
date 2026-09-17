@@ -174,8 +174,9 @@ export function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable;
   const [rpStr, riStr] = form.watch(["rp", "ri"]);
   const rp = parseBRL(rpStr), ri = parseBRL(riStr);
   const excede = rp > plannedProject + 0.01 || ri > plannedInnovatis + 0.01;
-  const saldoAntes = Number(r.balance_project) + Number(r.balance_innovatis);
-  const saldoDepois = Math.max(plannedProject - rp, 0) + Math.max(plannedInnovatis - ri, 0);
+  // Innovatis é uma fatia dentro do valor do Projeto — o total real é sempre o valor do Projeto, nunca a soma dos dois.
+  const saldoAntes = Number(r.balance_project);
+  const saldoDepois = Math.max(plannedProject - rp, 0);
   const onValid = (f: ReciboFormInput) => onSalvar({ received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), received_date: f.data || null, invoice_number: f.nf || null, note: f.note || null, justification: f.just || null });
   return (
     <form onSubmit={form.handleSubmit(onValid)} className="space-y-3">
@@ -194,7 +195,7 @@ export function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable;
           <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>NF</FieldLabel><Input id={field.name} aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
         )} />
       </div>
-      <div className="grid grid-cols-3 gap-2 rounded border border-line bg-canvas p-2 text-[12px]"><div>Saldo antes<div className="num font-semibold">{fmtBRL(saldoAntes)}</div></div><div>Valor recebido (total)<div className="num font-semibold text-ok">{fmtBRL(rp + ri)}</div></div><div>Saldo depois<div className="num font-semibold">{fmtBRL(saldoDepois)}</div></div></div>
+      <div className="grid grid-cols-3 gap-2 rounded border border-line bg-canvas p-2 text-[12px]"><div>Saldo antes<div className="num font-semibold">{fmtBRL(saldoAntes)}</div></div><div>Valor recebido (total)<div className="num font-semibold text-ok">{fmtBRL(rp)}</div></div><div>Saldo depois<div className="num font-semibold">{fmtBRL(saldoDepois)}</div></div></div>
       {excede && <div className="rounded border border-warn/40 bg-warn-soft p-2 text-[12px] text-warn"><b>Atenção:</b> o recebido supera o previsto. O saldo não fica negativo; a inconsistência será sinalizada. Para continuar, justifique e confirme.
         <Controller control={form.control} name="confirmar" render={({ field, fieldState }) => (
           <div className="mt-1"><label className="flex items-center gap-2"><input type="checkbox" checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />Confirmo que o valor está correto</label><FieldError errors={[fieldState.error]} /></div>
