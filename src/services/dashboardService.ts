@@ -4,10 +4,12 @@ import "server-only";
 import type { Receivable } from "@/types/domain";
 import { competenciaAtual, num } from "@/lib/format";
 
-export type Perspectiva = "projeto" | "innovatis" | "ambos";
-const previsto = (r: Receivable, p: Perspectiva) => (p === "innovatis" ? 0 : num(r.planned_project)) + (p === "projeto" ? 0 : num(r.planned_innovatis));
-const recebido = (r: Receivable, p: Perspectiva) => (p === "innovatis" ? 0 : num(r.received_project)) + (p === "projeto" ? 0 : num(r.received_innovatis));
-const saldo = (r: Receivable, p: Perspectiva) => (p === "innovatis" ? 0 : num(r.balance_project)) + (p === "projeto" ? 0 : num(r.balance_innovatis));
+export type Perspectiva = "projeto" | "innovatis";
+// Innovatis é uma fatia (comissão) DENTRO do valor do Projeto, não um valor adicional — nunca somar os dois.
+// "Projeto" (padrão) mostra o total do Projeto (já inclui a parte da Innovatis); "Innovatis" mostra só a fatia dela.
+const previsto = (r: Receivable, p: Perspectiva) => (p === "innovatis" ? num(r.planned_innovatis) : num(r.planned_project));
+const recebido = (r: Receivable, p: Perspectiva) => (p === "innovatis" ? num(r.received_innovatis) : num(r.received_project));
+const saldo = (r: Receivable, p: Perspectiva) => (p === "innovatis" ? num(r.balance_innovatis) : num(r.balance_project));
 
 export interface Cards { previsto: number; recebido: number; emAberto: number; emAtraso: number; batimento: string; projetosAtrasados: number; recebiveisAtrasados: number; prazosVencidos: number; }
 export function cards(rows: Receivable[], p: Perspectiva): Cards {

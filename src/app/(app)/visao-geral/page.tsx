@@ -23,7 +23,7 @@ export default async function VisaoGeralPage({ searchParams }: { searchParams: P
 }
 async function FiltrosServer() { const [op, etapas] = await Promise.all([opcoesDeFiltro(), listarEtapas()]); return <FiltrosGlobais op={op} etapas={etapas} comPerspectiva />; }
 async function Conteudo({ sp }: { sp: SP }) {
-  const p = (sp.p as Perspectiva) || "ambos";
+  const p = (sp.p as Perspectiva) || "projeto";
   const f = filtrosDaUrl(sp); f.competencia = undefined; // agregações precisam de todas as competências; o filtro de competência recorta abaixo
   const todos = await listarRecebiveisTodos(f);
   const rows = sp.competencia ? todos.filter((r) => r.competence === sp.competencia) : todos;

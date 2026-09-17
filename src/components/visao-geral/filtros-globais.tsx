@@ -11,7 +11,7 @@ export const FiltrosGlobais = ({ op, etapas, comPerspectiva }: { op: OpcoesFiltr
     <div className="space-y-2.5">
       <BuscaProjetoFiltro projetos={op.projetos} aoSelecionar={(nome) => router.push(`/cobrancas?q=${encodeURIComponent(nome)}&status=all`)} />
       <div className="panel flex flex-wrap items-end gap-2.5 px-4 py-3">
-        {comPerspectiva && <SelectFiltro chave="p" rotulo="Perspectiva" todos="Ambos" opcoes={[{ v: "projeto", l: "Projeto" }, { v: "innovatis", l: "Innovatis" }]} w="w-[120px]" />}
+        {comPerspectiva && <SelectFiltro chave="p" rotulo="Perspectiva" todos="Projeto" opcoes={[{ v: "innovatis", l: "Innovatis" }]} w="w-[120px]" />}
         <SelectFiltro chave="competencia" rotulo="Competência" todos="Todas" opcoes={op.competencias.map((c) => ({ v: c, l: fmtCompetencia(c) }))} w="w-[120px]" />
         <SelectFiltro chave="hub" rotulo="HUB" opcoes={["IFES", "GOV"]} w="w-[90px]" />
         <SelectFiltro chave="foundation" rotulo="Fundação" opcoes={op.fundacoes} />
