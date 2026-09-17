@@ -75,11 +75,17 @@
 }
 
 @utility panel-head {
-  @apply flex items-center justify-between border-b border-line px-4 py-2.5;
+  @apply grid grid-cols-[1fr_auto_1fr] items-center border-b border-line px-4 py-2.5;
 }
 
 @utility panel-title {
-  @apply text-[13px] font-semibold;
+  @apply col-start-2 text-center text-[13px] font-semibold uppercase tracking-wide;
+}
+
+/* Conteúdo secundário do cabeçalho do painel (contador, botão, paginação) fica à direita do título centralizado. */
+.panel-head > :not(.panel-title) {
+  grid-column: 3;
+  justify-self: end;
 }
 
 @utility clicavel {

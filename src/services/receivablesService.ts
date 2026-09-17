@@ -8,7 +8,7 @@ export type FiltroRapido = "atrasados" | "mes_atual" | "atrasados_mes_atual" | "
 export interface Filtros {
   rapido?: FiltroRapido; competencia?: string; hub?: Hub; foundation?: string; institute?: string; ministry?: string;
   q?: string; stage?: string; status?: ProjectStatus | "all"; etapa?: string; responsavel?: string; origem?: RecordOrigin;
-  provisorios?: "1" | "0"; fin?: FinStatus; prazoVencido?: "1"; flag?: string; receivable?: string;
+  provisorios?: "1" | "0"; fin?: FinStatus; prazoVencido?: "1"; flag?: string;
   page?: number; pageSize?: number; sort?: string; dir?: "asc" | "desc"; userId?: string;
 }
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
@@ -33,7 +33,6 @@ function aplicar(q: Builder, f: Filtros): Builder {
   if (f.flag) b = b.eq("flag", f.flag);
   if (f.prazoVencido === "1") b = b.eq("deadline_overdue", true);
   if (f.q) b = b.ilike("search_text", `%${norm(f.q)}%`);
-  if (f.receivable) b = b.eq("id", f.receivable);
   switch (f.rapido) {
     case "atrasados": b = b.eq("is_overdue", true); break;
     case "mes_atual": b = b.eq("competence", atual); break;
@@ -69,15 +68,18 @@ export async function listarRecebiveisTodos(f: Filtros, limite = 5000): Promise<
   return (data as Receivable[]) ?? [];
 }
 
-export async function obterRecebivel(id: string): Promise<Receivable | null> {
+/** Todos os recebíveis (competências) de um projeto — página de detalhe do projeto. */
+export async function listarRecebiveisPorProjeto(projectId: string): Promise<Receivable[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("v_receivables_enriched").select("*").eq("id", id).maybeSingle<Receivable>();
-  return data ?? null;
+  const { data, error } = await supabase.from("v_receivables_enriched").select("*").eq("project_id", projectId).eq("active", true).order("competence");
+  if (error) throw error;
+  return (data as Receivable[]) ?? [];
 }
 
 export async function opcoesDeFiltro() {
   const supabase = await createClient();
-  const { data } = await supabase.from("v_receivables_enriched").select("foundation, institute, ministry_government, responsible_name, flag, competence").eq("active", true).limit(5000);
+  const { data } = await supabase.from("v_receivables_enriched").select("foundation, institute, ministry_government, responsible_name, flag, competence, project_id, project_name").eq("active", true).limit(5000);
   const uniq = (k: string) => [...new Set((data ?? []).map((r) => (r as Record<string, string | null>)[k]).filter((v): v is string => !!v))].sort();
-  return { fundacoes: uniq("foundation"), institutos: uniq("institute"), ministerios: uniq("ministry_government"), responsaveis: uniq("responsible_name"), flags: uniq("flag"), competencias: uniq("competence") };
+  const projetos = [...new Map((data ?? []).map((r) => [r.project_id, { id: r.project_id as string, nome: r.project_name as string }])).values()].sort((a, b) => a.nome.localeCompare(b.nome));
+  return { fundacoes: uniq("foundation"), institutos: uniq("institute"), ministerios: uniq("ministry_government"), responsaveis: uniq("responsible_name"), flags: uniq("flag"), competencias: uniq("competence"), projetos };
 }

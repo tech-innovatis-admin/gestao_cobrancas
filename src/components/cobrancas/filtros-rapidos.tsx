@@ -9,8 +9,8 @@ export const FiltrosRapidos = () => {
   const { get, set } = useUrlFiltros(); const atual = get("rapido") || (get("competencia") ? "mes" : "todos");
   return (
     <div className="flex flex-wrap gap-1">
-      {itens.map((i) => <Button key={i.v} type="button" size="sm" variant={atual === i.v ? "default" : "outline"} onClick={() => set({ rapido: i.v === "todos" ? "" : i.v, competencia: "" })}>{i.l}</Button>)}
-      {atual === "mes" && <Button type="button" size="sm" disabled>Mês específico</Button>}
+      {itens.map((i) => <Button key={i.v} type="button" size="sm" variant={atual === i.v ? "default" : "outline"} className="uppercase tracking-wide" onClick={() => set({ rapido: i.v === "todos" ? "" : i.v, competencia: "" })}>{i.l}</Button>)}
+      {atual === "mes" && <Button type="button" size="sm" disabled className="uppercase tracking-wide">Mês específico</Button>}
     </div>
   );
 };

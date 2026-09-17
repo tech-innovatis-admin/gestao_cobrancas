@@ -10,20 +10,21 @@ import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Erro, Pendente } from "@/components/ui/basicos";
 import { fmtBRL, parseBRL } from "@/lib/format";
-import { alterarFase, alterarSituacao, criarRecebivel, editarProjeto, excluirDaGestao, registrarRecebimento, restaurarProjeto, salvarFinanceiro, type Resultado } from "@/services/receivablesActions";
+import { alterarFase, alterarSituacao, criarRecebivel, editarProjeto, excluirDaGestao, restaurarProjeto, type Resultado } from "@/services/receivablesActions";
 import { editarProjetoSchema, type EditarProjetoInput, alterarFaseSchema, type AlterarFaseInput, alterarSituacaoSchema, type AlterarSituacaoInput, financeiroFormSchema, type FinanceiroFormInput, reciboFormSchema, type ReciboFormInput, novaParcelaFormSchema, type NovaParcelaFormInput, motivoSchema, type MotivoInput } from "@/lib/schemas/receivables-admin";
-import { ORIGIN_LABEL, type CollectionStatus, type Receivable } from "@/types/domain";
+import { ORIGIN_LABEL, type CollectionStatus, type Project, type Receivable } from "@/types/domain";
 
-type Acao = "cadastro" | "fase" | "situacao" | "valores" | "recebimento" | "parcela" | "excluir" | "restaurar" | null;
+type Acao = "cadastro" | "fase" | "situacao" | "excluir" | "restaurar" | null;
 const ORIGENS = Object.entries(ORIGIN_LABEL) as [Receivable["origin"], string][];
 
-export const AcoesMaster = ({ r, etapas, onFeito }: { r: Receivable; etapas: CollectionStatus[]; onFeito: () => void }) => {
+/** Ações de projeto (cadastro, fase, situação, arquivamento) — usadas na aba Ações da página de detalhe do projeto. */
+export const AcoesProjeto = ({ p, onFeito }: { p: Project; onFeito: () => void }) => {
   const [acao, setAcao] = useState<Acao>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const exec = (fn: () => Promise<Resultado<unknown>>) => start(async () => { const res = await fn(); if (!res.ok) { setErro(res.erro); return; } setErro(null); setAcao(null); onFeito(); });
   const fechar = () => { setAcao(null); setErro(null); };
-  const arquivado = !r.project_active;
+  const arquivado = !p.active;
 
   return (
     <section className="space-y-2">
@@ -33,9 +34,6 @@ export const AcoesMaster = ({ r, etapas, onFeito }: { r: Receivable; etapas: Col
           <Button size="sm" variant="outline" onClick={() => setAcao("cadastro")}>Editar cadastro</Button>
           <Button size="sm" variant="outline" onClick={() => setAcao("fase")}>Alterar Fase</Button>
           <Button size="sm" variant="outline" onClick={() => setAcao("situacao")}>Alterar Situação</Button>
-          <Button size="sm" variant="outline" onClick={() => setAcao("valores")}>Editar valores</Button>
-          <Button size="sm" variant="outline" onClick={() => setAcao("recebimento")}>Registrar recebimento</Button>
-          <Button size="sm" variant="outline" onClick={() => setAcao("parcela")}>Criar nova parcela</Button>
           <Button size="sm" variant="destructive" onClick={() => setAcao("excluir")}>Excluir da gestão</Button>
         </>}
         {arquivado && <Button size="sm" onClick={() => setAcao("restaurar")}>Restaurar</Button>}
@@ -44,20 +42,17 @@ export const AcoesMaster = ({ r, etapas, onFeito }: { r: Receivable; etapas: Col
       </div>
       <p className="text-[11px] text-ink-faint">Vincular e sincronizar: <Pendente /></p>
 
-      <Dialog open={acao === "cadastro"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Editar cadastro do projeto</DialogTitle></DialogHeader><FormCadastro r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => editarProjeto(r.project_id, d))} /></DialogContent></Dialog>
-      <Dialog open={acao === "fase"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Alterar Fase do projeto</DialogTitle></DialogHeader><FormFase atual={r.stage_code} erro={erro} pending={pending} onSalvar={(f, j) => exec(() => alterarFase(r.project_id, f, j))} /></DialogContent></Dialog>
-      <Dialog open={acao === "situacao"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Alterar Situação do projeto</DialogTitle></DialogHeader><FormSituacao r={r} erro={erro} pending={pending} onSalvar={(s, j, f) => exec(() => alterarSituacao(r.project_id, s, j, f))} /></DialogContent></Dialog>
-      <Dialog open={acao === "valores"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Editar valores</DialogTitle></DialogHeader><FormValores r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => salvarFinanceiro({ id: r.id, ...d }))} /></DialogContent></Dialog>
-      <Dialog open={acao === "recebimento"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Registrar recebimento</DialogTitle></DialogHeader><FormRecebimento r={r} erro={erro} pending={pending} onSalvar={(d) => exec(() => registrarRecebimento({ id: r.id, ...d }))} /></DialogContent></Dialog>
-      <Dialog open={acao === "parcela"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Nova parcela / recebível</DialogTitle></DialogHeader><FormParcela r={r} etapas={etapas} erro={erro} pending={pending} onSalvar={(d) => exec(() => criarRecebivel({ project_id: r.project_id, ...d }))} /></DialogContent></Dialog>
-      <Dialog open={acao === "excluir"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Excluir da gestão</DialogTitle></DialogHeader><FormMotivo texto={`O projeto "${r.project_name}" e todos os seus recebíveis deixarão de aparecer em dashboards, totais, cobranças e filtros. O histórico é preservado e o projeto pode ser restaurado.`} rotulo="Confirmar exclusão" erro={erro} pending={pending} onSalvar={(m) => exec(() => excluirDaGestao(r.project_id, m))} danger /></DialogContent></Dialog>
-      <Dialog open={acao === "restaurar"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Restaurar projeto</DialogTitle></DialogHeader><p className="text-[13px]">Restaurar &quot;{r.project_name}&quot; e seus recebíveis para a operação ativa?</p><Erro msg={erro} /><div className="mt-4 flex justify-end gap-2"><Button variant="outline" onClick={fechar}>Cancelar</Button><Button disabled={pending} onClick={() => exec(() => restaurarProjeto(r.project_id))}>Restaurar</Button></div></DialogContent></Dialog>
+      <Dialog open={acao === "cadastro"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Editar cadastro do projeto</DialogTitle></DialogHeader><FormCadastro p={p} erro={erro} pending={pending} onSalvar={(d) => exec(() => editarProjeto(p.id, d))} /></DialogContent></Dialog>
+      <Dialog open={acao === "fase"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Alterar Fase do projeto</DialogTitle></DialogHeader><FormFase atual={p.stage_code} erro={erro} pending={pending} onSalvar={(f, j) => exec(() => alterarFase(p.id, f, j))} /></DialogContent></Dialog>
+      <Dialog open={acao === "situacao"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Alterar Situação do projeto</DialogTitle></DialogHeader><FormSituacao p={p} erro={erro} pending={pending} onSalvar={(s, j, f) => exec(() => alterarSituacao(p.id, s, j, f))} /></DialogContent></Dialog>
+      <Dialog open={acao === "excluir"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Excluir da gestão</DialogTitle></DialogHeader><FormMotivo texto={`O projeto "${p.name}" e todos os seus recebíveis deixarão de aparecer em dashboards, totais, cobranças e filtros. O histórico é preservado e o projeto pode ser restaurado.`} rotulo="Confirmar exclusão" erro={erro} pending={pending} onSalvar={(m) => exec(() => excluirDaGestao(p.id, m))} danger /></DialogContent></Dialog>
+      <Dialog open={acao === "restaurar"} onOpenChange={(o) => !o && fechar()}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Restaurar projeto</DialogTitle></DialogHeader><p className="text-[13px]">Restaurar &quot;{p.name}&quot; e seus recebíveis para a operação ativa?</p><Erro msg={erro} /><div className="mt-4 flex justify-end gap-2"><Button variant="outline" onClick={fechar}>Cancelar</Button><Button disabled={pending} onClick={() => exec(() => restaurarProjeto(p.id))}>Restaurar</Button></div></DialogContent></Dialog>
     </section>
   );
 };
 
-function FormCadastro({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: EditarProjetoInput) => void }) {
-  const form = useForm<EditarProjetoInput>({ resolver: zodResolver(editarProjetoSchema), defaultValues: { name: r.project_name, hub: r.hub, ministry_government: r.ministry_government ?? "", institute: r.institute ?? "", foundation: r.foundation ?? "", origin: r.project_origin, provisional: r.project_provisional, notes: "" } });
+function FormCadastro({ p, erro, pending, onSalvar }: { p: Project; erro: string | null; pending: boolean; onSalvar: (d: EditarProjetoInput) => void }) {
+  const form = useForm<EditarProjetoInput>({ resolver: zodResolver(editarProjetoSchema), defaultValues: { name: p.name, hub: p.hub, ministry_government: p.ministry_government ?? "", institute: p.institute ?? "", foundation: p.foundation ?? "", origin: p.origin, provisional: p.provisional, notes: p.notes ?? "" } });
   return (
     <form onSubmit={form.handleSubmit(onSalvar)} className="grid grid-cols-2 gap-3">
       <Controller control={form.control} name="name" render={({ field, fieldState }) => (
@@ -110,12 +105,12 @@ function FormFase({ atual, erro, pending, onSalvar }: { atual: string | null; er
     </form>
   );
 }
-function FormSituacao({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (s: "active" | "backlog" | "lost", j: string | null, f: string | null) => void }) {
-  const statusOriginal = r.project_status === "archived" ? "active" : r.project_status;
-  const schema = alterarSituacaoSchema(r.project_status);
-  const form = useForm<AlterarSituacaoInput>({ resolver: zodResolver(schema), defaultValues: { status: statusOriginal, justification: "", stage_code: r.stage_code ?? "" } });
+function FormSituacao({ p, erro, pending, onSalvar }: { p: Project; erro: string | null; pending: boolean; onSalvar: (s: "active" | "backlog" | "lost", j: string | null, f: string | null) => void }) {
+  const statusOriginal = p.project_status === "archived" ? "active" : p.project_status;
+  const schema = alterarSituacaoSchema(p.project_status);
+  const form = useForm<AlterarSituacaoInput>({ resolver: zodResolver(schema), defaultValues: { status: statusOriginal, justification: "", stage_code: p.stage_code ?? "" } });
   const status = form.watch("status");
-  const reativandoPerdido = r.project_status === "lost" && status === "active";
+  const reativandoPerdido = p.project_status === "lost" && status === "active";
   const onValid = (d: AlterarSituacaoInput) => onSalvar(d.status, d.justification || null, d.stage_code || null);
   return (
     <form onSubmit={form.handleSubmit(onValid)} className="space-y-3">
@@ -137,7 +132,7 @@ function FormSituacao({ r, erro, pending, onSalvar }: { r: Receivable; erro: str
     </form>
   );
 }
-function FormValores({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { planned_project: number; planned_innovatis: number; received_project: number; received_innovatis: number; competence: string; flag: string | null; origin: Receivable["origin"]; provisional: boolean; legacy_consolidated: boolean; justification: string | null }) => void }) {
+export function FormValores({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { planned_project: number; planned_innovatis: number; received_project: number; received_innovatis: number; competence: string; flag: string | null; origin: Receivable["origin"]; provisional: boolean; legacy_consolidated: boolean; justification: string | null }) => void }) {
   const s = (n: number | string) => Number(n).toFixed(2).replace(".", ",");
   const form = useForm<FinanceiroFormInput>({ resolver: zodResolver(financeiroFormSchema), defaultValues: { pp: s(r.planned_project), pi: s(r.planned_innovatis), rp: s(r.received_project), ri: s(r.received_innovatis), competence: r.competence, flag: r.flag ?? "", origin: r.origin, provisional: r.provisional, legacy_consolidated: r.legacy_consolidated, justification: "" } });
   const onValid = (f: FinanceiroFormInput) => onSalvar({ planned_project: parseBRL(f.pp), planned_innovatis: parseBRL(f.pi), received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), competence: f.competence.slice(0, 8) + "01", flag: f.flag || null, origin: f.origin, provisional: f.provisional, legacy_consolidated: f.legacy_consolidated, justification: f.justification || null });
@@ -172,7 +167,7 @@ function FormValores({ r, erro, pending, onSalvar }: { r: Receivable; erro: stri
     </form>
   );
 }
-function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { received_project: number; received_innovatis: number; received_date: string | null; invoice_number: string | null; note: string | null; justification: string | null }) => void }) {
+export function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable; erro: string | null; pending: boolean; onSalvar: (d: { received_project: number; received_innovatis: number; received_date: string | null; invoice_number: string | null; note: string | null; justification: string | null }) => void }) {
   const plannedProject = Number(r.planned_project), plannedInnovatis = Number(r.planned_innovatis);
   const schema = reciboFormSchema(plannedProject, plannedInnovatis);
   const form = useForm<ReciboFormInput>({ resolver: zodResolver(schema), defaultValues: { rp: Number(r.received_project).toFixed(2).replace(".", ","), ri: Number(r.received_innovatis).toFixed(2).replace(".", ","), data: "", nf: "", note: "", just: "", confirmar: false } });
@@ -215,9 +210,9 @@ function FormRecebimento({ r, erro, pending, onSalvar }: { r: Receivable; erro: 
     </form>
   );
 }
-function FormParcela({ r, etapas, erro, pending, onSalvar }: { r: Receivable; etapas: CollectionStatus[]; erro: string | null; pending: boolean; onSalvar: (d: Omit<Parameters<typeof criarRecebivel>[0], "project_id">) => void }) {
-  const opcoesHub = etapas.filter((e) => e.hub === r.hub);
-  const form = useForm<NovaParcelaFormInput>({ resolver: zodResolver(novaParcelaFormSchema), defaultValues: { competence: "", pp: "", pi: "", rp: "0", ri: "0", etapa: "", reason: "", action: "", deadline: "", flag: "", origin: "platform", provisional: r.project_provisional } });
+export function FormParcela({ p, etapas, erro, pending, onSalvar }: { p: Project; etapas: CollectionStatus[]; erro: string | null; pending: boolean; onSalvar: (d: Omit<Parameters<typeof criarRecebivel>[0], "project_id">) => void }) {
+  const opcoesHub = etapas.filter((e) => e.hub === p.hub);
+  const form = useForm<NovaParcelaFormInput>({ resolver: zodResolver(novaParcelaFormSchema), defaultValues: { competence: "", pp: "", pi: "", rp: "0", ri: "0", etapa: "", reason: "", action: "", deadline: "", flag: "", origin: "platform", provisional: p.provisional } });
   const onValid = (f: NovaParcelaFormInput) => onSalvar({ competence: `${f.competence}-01`, planned_project: parseBRL(f.pp), planned_innovatis: parseBRL(f.pi), received_project: parseBRL(f.rp), received_innovatis: parseBRL(f.ri), collection_status_id: f.etapa || null, reason: f.reason || null, action: f.action || null, responsible_user_id: null, responsible_legacy_name: null, operational_deadline: f.deadline || null, flag: f.flag || null, origin: f.origin, provisional: f.provisional });
   const CampoNum = ({ name, label }: { name: "pp" | "pi" | "rp" | "ri"; label: string }) => (
     <Controller control={form.control} name={name} render={({ field, fieldState }) => (
@@ -226,7 +221,7 @@ function FormParcela({ r, etapas, erro, pending, onSalvar }: { r: Receivable; et
   );
   return (
     <form onSubmit={form.handleSubmit(onValid)} className="grid grid-cols-2 gap-3">
-      <p className="col-span-2 text-[12px] text-ink-muted">Projeto: <b>{r.project_name}</b></p>
+      <p className="col-span-2 text-[12px] text-ink-muted">Projeto: <b>{p.name}</b></p>
       <Controller control={form.control} name="competence" render={({ field, fieldState }) => (
         <Field data-invalid={!!fieldState.error}><FieldLabel htmlFor={field.name}>Competência</FieldLabel><Input id={field.name} type="month" aria-invalid={!!fieldState.error} {...field} /><FieldError errors={[fieldState.error]} /></Field>
       )} />
@@ -260,7 +255,7 @@ function FormParcela({ r, etapas, erro, pending, onSalvar }: { r: Receivable; et
     </form>
   );
 }
-function FormMotivo({ texto, rotulo, erro, pending, onSalvar, danger }: { texto: string; rotulo: string; erro: string | null; pending: boolean; onSalvar: (m: string) => void; danger?: boolean }) {
+export function FormMotivo({ texto, rotulo, erro, pending, onSalvar, danger }: { texto: string; rotulo: string; erro: string | null; pending: boolean; onSalvar: (m: string) => void; danger?: boolean }) {
   const form = useForm<MotivoInput>({ resolver: zodResolver(motivoSchema), defaultValues: { motivo: "" } });
   const onValid = (d: MotivoInput) => onSalvar(d.motivo);
   return (

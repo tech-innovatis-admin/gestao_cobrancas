@@ -16,7 +16,7 @@ import { filtrosDaUrl, type SP } from "@/lib/filtros-url";
 export const dynamic = "force-dynamic";
 export default async function VisaoGeralPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams; const perfil = await perfilAtual();
-  return (<><Topbar titulo="Visão Geral" perfil={perfil} /><main className="space-y-4 p-5">
+  return (<><Topbar titulo="Visão Executiva" perfil={perfil} /><main className="space-y-4 p-5">
     <Suspense fallback={<Skeleton className="h-24" />}><FiltrosServer /></Suspense>
     <Suspense key={JSON.stringify(sp)} fallback={<><Skeleton className="h-20" /><Skeleton className="h-96" /></>}><Conteudo sp={sp} /></Suspense>
   </main></>);

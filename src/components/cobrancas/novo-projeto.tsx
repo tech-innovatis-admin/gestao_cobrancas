@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Modal } from "@/components/ui/modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,7 +30,9 @@ export const NovoProjeto = () => {
 
   return (<>
     <Button size="sm" onClick={() => setAberto(true)}><Plus size={13} /> Novo projeto</Button>
-    <Modal aberto={aberto} titulo="Cadastrar projeto" onFechar={() => setAberto(false)}>
+    <Dialog open={aberto} onOpenChange={(o) => !o && setAberto(false)}>
+      <DialogContent className="sm:max-w-lg">
+      <DialogHeader><DialogTitle>Cadastrar projeto</DialogTitle></DialogHeader>
       <form onSubmit={form.handleSubmit(onValid)}>
         <FieldGroup className="grid grid-cols-2 gap-3">
           <Controller control={form.control} name="name" render={({ field, fieldState }) => (
@@ -87,6 +89,7 @@ export const NovoProjeto = () => {
         <p className="mt-2 text-[11px] text-ink-faint">Após criar o projeto, abra qualquer recebível dele (ou use &quot;Criar nova parcela&quot;) para cadastrar as competências previstas.</p>
         <Erro msg={erro} /><div className="mt-4 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setAberto(false)}>Cancelar</Button><Button type="submit" disabled={pending}>{pending ? "Criando…" : "Criar projeto"}</Button></div>
       </form>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   </>);
 };

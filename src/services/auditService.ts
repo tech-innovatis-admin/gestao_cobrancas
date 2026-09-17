@@ -29,10 +29,13 @@ export async function listarAuditoria(f: FiltrosAuditoria): Promise<{ rows: Audi
   return { rows, total: count ?? 0 };
 }
 
-/** Últimas alterações de um recebível (drawer). Só Master Admin enxerga audit_logs por RLS; para Operator retornamos vazio. */
-export async function historicoRecebivel(id: string, limite = 5): Promise<AuditLog[]> {
+/** Histórico de um projeto: alterações no cadastro do projeto + em qualquer um dos seus recebíveis. */
+export async function historicoProjeto(projectId: string, limite = 20): Promise<AuditLog[]> {
   const s = await createClient();
-  const { data } = await s.from("audit_logs").select("*").eq("entity_type", "receivables").eq("entity_id", id).order("occurred_at", { ascending: false }).limit(limite);
+  const { data: recs } = await s.from("receivables").select("id").eq("project_id", projectId);
+  const receivableIds = (recs ?? []).map((r) => r.id as string);
+  const filtro = receivableIds.length ? `entity_id.eq.${projectId},entity_id.in.(${receivableIds.join(",")})` : `entity_id.eq.${projectId}`;
+  const { data } = await s.from("audit_logs").select("*").in("entity_type", ["projects", "receivables"]).or(filtro).order("occurred_at", { ascending: false }).limit(limite);
   return (data as AuditLog[]) ?? [];
 }
 export async function listarSyncRuns(): Promise<SyncRun[]> { const s = await createClient(); const { data } = await s.from("sync_runs").select("*").order("started_at", { ascending: false }).limit(50); return (data as SyncRun[]) ?? []; }
