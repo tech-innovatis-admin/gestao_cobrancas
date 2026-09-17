@@ -75,6 +75,14 @@ export async function obterRecebivel(id: string): Promise<Receivable | null> {
   return data ?? null;
 }
 
+/** Todos os recebíveis (competências) de um projeto — página de detalhe do projeto. */
+export async function listarRecebiveisPorProjeto(projectId: string): Promise<Receivable[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("v_receivables_enriched").select("*").eq("project_id", projectId).eq("active", true).order("competence");
+  if (error) throw error;
+  return (data as Receivable[]) ?? [];
+}
+
 export async function opcoesDeFiltro() {
   const supabase = await createClient();
   const { data } = await supabase.from("v_receivables_enriched").select("foundation, institute, ministry_government, responsible_name, flag, competence, project_id, project_name").eq("active", true).limit(5000);

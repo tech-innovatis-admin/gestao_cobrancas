@@ -35,6 +35,16 @@ export async function historicoRecebivel(id: string, limite = 5): Promise<AuditL
   const { data } = await s.from("audit_logs").select("*").eq("entity_type", "receivables").eq("entity_id", id).order("occurred_at", { ascending: false }).limit(limite);
   return (data as AuditLog[]) ?? [];
 }
+
+/** Histórico de um projeto: alterações no cadastro do projeto + em qualquer um dos seus recebíveis. */
+export async function historicoProjeto(projectId: string, limite = 20): Promise<AuditLog[]> {
+  const s = await createClient();
+  const { data: recs } = await s.from("receivables").select("id").eq("project_id", projectId);
+  const receivableIds = (recs ?? []).map((r) => r.id as string);
+  const filtro = receivableIds.length ? `entity_id.eq.${projectId},entity_id.in.(${receivableIds.join(",")})` : `entity_id.eq.${projectId}`;
+  const { data } = await s.from("audit_logs").select("*").in("entity_type", ["projects", "receivables"]).or(filtro).order("occurred_at", { ascending: false }).limit(limite);
+  return (data as AuditLog[]) ?? [];
+}
 export async function listarSyncRuns(): Promise<SyncRun[]> { const s = await createClient(); const { data } = await s.from("sync_runs").select("*").order("started_at", { ascending: false }).limit(50); return (data as SyncRun[]) ?? []; }
 export async function contarFila(): Promise<number> { const s = await createClient(); const { count } = await s.from("sync_queue").select("*", { count: "exact", head: true }).eq("status", "pending"); return count ?? 0; }
 export async function ultimaSync(): Promise<{ status: string; started_at?: string; finished_at?: string }> { const s = await createClient(); const { data } = await s.rpc("rpc_last_sync"); return (data as { status: string }) ?? { status: "not_configured" }; }
