@@ -4,7 +4,7 @@ import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { BuscaFiltro, LimparFiltros, SelectFiltro } from "@/components/filtros/campos";
 import { useUrlFiltros } from "@/components/filtros/use-url-filtros";
-import { Modal } from "@/components/ui/modal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/basicos";
@@ -35,15 +35,18 @@ export const Alteracoes = ({ rows, total, page }: { rows: AuditLogEnriched[]; to
         {rows.map((r) => <TableRow key={r.id} className="clicavel" onClick={() => setAberto(r)}><TableCell className="num">{fmtDataHora(r.occurred_at)}</TableCell><TableCell>{r.actor_name ?? (r.source === "google_sheets" ? "Alteração externa" : "sistema")}</TableCell><TableCell className="text-ink-muted">{r.actor_email ?? "—"}</TableCell><TableCell className="max-w-[220px] truncate" title={r.project_name ?? ""}>{r.project_name ?? <span className="text-ink-faint">{r.entity_type}</span>}</TableCell><TableCell>{r.competence ? fmtCompetencia(r.competence) : "—"}</TableCell><TableCell>{ACTION_LABEL[r.action_type] ?? r.action_type}</TableCell><TableCell className="max-w-[260px] truncate">{r.changed_fields.map((c) => FIELD_LABEL[c] ?? c).join(", ") || "—"}</TableCell><TableCell>{r.source}</TableCell><TableCell>{r.sync_status ? <BadgeSync s={r.sync_status} /> : "—"}</TableCell></TableRow>)}
       </TableBody></Table></div>}
     </div>
-    <Modal aberto={!!aberto} titulo="Before × After" onFechar={() => setAberto(null)} largura="max-w-2xl">
-      {aberto && (<div className="space-y-2 text-[12px]">
-        <p><b>{ACTION_LABEL[aberto.action_type] ?? aberto.action_type}</b> · {aberto.entity_type} · {fmtDataHora(aberto.occurred_at)} · {aberto.actor_name ?? "—"} ({aberto.actor_email ?? aberto.source})</p>
-        {aberto.source === "google_sheets" && <p className="rounded border border-warn/40 bg-warn-soft p-2 text-warn">Alteração identificada diretamente na planilha. O usuário responsável não pôde ser identificado pela plataforma.</p>}
-        {aberto.metadata && <p className="text-ink-muted">Metadados: {JSON.stringify(aberto.metadata)}</p>}
-        <div className="max-h-[50vh] overflow-auto"><Table><TableHeader><TableRow><TableHead>Campo</TableHead><TableHead>Antes</TableHead><TableHead>Depois</TableHead></TableRow></TableHeader><TableBody>
-          {(aberto.changed_fields.length ? aberto.changed_fields : Object.keys(aberto.after_data ?? aberto.before_data ?? {})).map((c) => <TableRow key={c}><TableCell>{FIELD_LABEL[c] ?? c}</TableCell><TableCell className="whitespace-normal text-ink-muted">{val(aberto.before_data?.[c])}</TableCell><TableCell className="whitespace-normal font-medium">{val(aberto.after_data?.[c])}</TableCell></TableRow>)}
-        </TableBody></Table></div>
-      </div>)}
-    </Modal>
+    <Dialog open={!!aberto} onOpenChange={(o) => !o && setAberto(null)}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader><DialogTitle>Antes × Depois</DialogTitle></DialogHeader>
+        {aberto && (<div className="space-y-2 text-[12px]">
+          <p><b>{ACTION_LABEL[aberto.action_type] ?? aberto.action_type}</b> · {aberto.entity_type} · {fmtDataHora(aberto.occurred_at)} · {aberto.actor_name ?? "—"} ({aberto.actor_email ?? aberto.source})</p>
+          {aberto.source === "google_sheets" && <p className="rounded border border-warn/40 bg-warn-soft p-2 text-warn">Alteração identificada diretamente na planilha. O usuário responsável não pôde ser identificado pela plataforma.</p>}
+          {aberto.metadata && <p className="text-ink-muted">Metadados: {JSON.stringify(aberto.metadata)}</p>}
+          <div className="max-h-[50vh] overflow-auto"><Table><TableHeader><TableRow><TableHead>Campo</TableHead><TableHead>Antes</TableHead><TableHead>Depois</TableHead></TableRow></TableHeader><TableBody>
+            {(aberto.changed_fields.length ? aberto.changed_fields : Object.keys(aberto.after_data ?? aberto.before_data ?? {})).map((c) => <TableRow key={c}><TableCell>{FIELD_LABEL[c] ?? c}</TableCell><TableCell className="whitespace-normal text-ink-muted">{val(aberto.before_data?.[c])}</TableCell><TableCell className="whitespace-normal font-medium">{val(aberto.after_data?.[c])}</TableCell></TableRow>)}
+          </TableBody></Table></div>
+        </div>)}
+      </DialogContent>
+    </Dialog>
   </>);
 };
