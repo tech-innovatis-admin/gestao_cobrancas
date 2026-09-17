@@ -77,7 +77,8 @@ export async function obterRecebivel(id: string): Promise<Receivable | null> {
 
 export async function opcoesDeFiltro() {
   const supabase = await createClient();
-  const { data } = await supabase.from("v_receivables_enriched").select("foundation, institute, ministry_government, responsible_name, flag, competence").eq("active", true).limit(5000);
+  const { data } = await supabase.from("v_receivables_enriched").select("foundation, institute, ministry_government, responsible_name, flag, competence, project_id, project_name").eq("active", true).limit(5000);
   const uniq = (k: string) => [...new Set((data ?? []).map((r) => (r as Record<string, string | null>)[k]).filter((v): v is string => !!v))].sort();
-  return { fundacoes: uniq("foundation"), institutos: uniq("institute"), ministerios: uniq("ministry_government"), responsaveis: uniq("responsible_name"), flags: uniq("flag"), competencias: uniq("competence") };
+  const projetos = [...new Map((data ?? []).map((r) => [r.project_id, { id: r.project_id as string, nome: r.project_name as string }])).values()].sort((a, b) => a.nome.localeCompare(b.nome));
+  return { fundacoes: uniq("foundation"), institutos: uniq("institute"), ministerios: uniq("ministry_government"), responsaveis: uniq("responsible_name"), flags: uniq("flag"), competencias: uniq("competence"), projetos };
 }
