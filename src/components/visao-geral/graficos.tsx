@@ -28,7 +28,7 @@ export const GraficosVisaoGeral = ({ g }: { g: Graficos }) => (
     <Painel t="Top 5 projetos em atraso">
       {g.top5Atraso.length === 0 ? <p className="p-4 text-[12px] text-ink-faint">Nenhum projeto em atraso.</p> :
       <Table><TableHeader><TableRow><TableHead>Projeto</TableHead><TableHead className="num">Em atraso</TableHead><TableHead>Competência mais antiga</TableHead></TableRow></TableHeader><TableBody>
-        {g.top5Atraso.map((t) => <TableRow key={t.id} className="clicavel"><TableCell className="max-w-[200px] truncate"><Link href={`/cobrancas?receivable=${t.id}`} className="hover:text-action">{t.projeto}</Link></TableCell><TableCell className="num text-danger">{fmtBRL(t.valor)}</TableCell><TableCell>{fmtCompetencia(t.competencia)}</TableCell></TableRow>)}
+        {g.top5Atraso.map((t) => <TableRow key={t.projectId} className="clicavel"><TableCell className="max-w-[200px] truncate"><Link href={`/cobrancas/${t.projectId}`} className="hover:text-action">{t.projeto}</Link></TableCell><TableCell className="num text-danger">{fmtBRL(t.valor)}</TableCell><TableCell>{fmtCompetencia(t.competencia)}</TableCell></TableRow>)}
       </TableBody></Table>}
     </Painel>
     <div className="grid grid-cols-2 gap-3"><Painel t="Projetos por fase" h={180}><Contagem data={g.porFase} cores={[C.ok, C.info, C.grey, C.warn, C.danger]} /></Painel><Painel t="Situação da carteira" h={180}><Contagem data={g.carteira} cores={[C.ok, C.warn, C.danger]} /></Painel></div>

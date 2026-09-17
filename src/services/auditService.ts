@@ -29,13 +29,6 @@ export async function listarAuditoria(f: FiltrosAuditoria): Promise<{ rows: Audi
   return { rows, total: count ?? 0 };
 }
 
-/** Últimas alterações de um recebível (drawer). Só Master Admin enxerga audit_logs por RLS; para Operator retornamos vazio. */
-export async function historicoRecebivel(id: string, limite = 5): Promise<AuditLog[]> {
-  const s = await createClient();
-  const { data } = await s.from("audit_logs").select("*").eq("entity_type", "receivables").eq("entity_id", id).order("occurred_at", { ascending: false }).limit(limite);
-  return (data as AuditLog[]) ?? [];
-}
-
 /** Histórico de um projeto: alterações no cadastro do projeto + em qualquer um dos seus recebíveis. */
 export async function historicoProjeto(projectId: string, limite = 20): Promise<AuditLog[]> {
   const s = await createClient();

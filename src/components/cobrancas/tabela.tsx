@@ -29,7 +29,7 @@ export const TabelaCobrancas = ({ rows, total, page, size, onAbrir }: { rows: Re
         <div className="max-h-[calc(100vh-330px)] overflow-auto">
           <Table><TableHeader><TableRow>{COLS.map((c) => <TableHead key={c.k} className={cn(c.num && "num", c.fix && "fix z-20!", c.sort && "cursor-pointer select-none")} onClick={() => ordenar(c.sort)}>{c.l}{sort === c.sort && (dir === "asc" ? <ArrowUp size={11} className="ml-1 inline" /> : <ArrowDown size={11} className="ml-1 inline" />)}</TableHead>)}</TableRow></TableHeader>
           <TableBody>{rows.map((r) => (
-            <TableRow key={r.id} className={cn("clicavel", r.is_overdue && "bg-danger-soft/40!", r.sync_status === "error" && "bg-danger-soft/60!")} onClick={() => onAbrir(r.id)}>
+            <TableRow key={r.id} className={cn("clicavel", r.is_overdue && "bg-danger-soft/40!", r.sync_status === "error" && "bg-danger-soft/60!")} onClick={() => onAbrir(r.project_id)}>
               <TableCell className="fix"><BadgeFase code={r.stage_code} color={r.stage_color} pending={r.stage_pending} /></TableCell>
               <TableCell className="fix left-[52px]!"><span className="inline-flex items-center gap-1">{fmtCompetencia(r.competence)}{r.legacy_consolidated && <BadgeConsolidado />}</span></TableCell>
               <TableCell>{r.hub}</TableCell><TableCell>{trunc(r.ministry_government, "max-w-[120px]")}</TableCell><TableCell>{trunc(r.institute, "max-w-[90px]")}</TableCell><TableCell>{trunc(r.foundation, "max-w-[90px]")}</TableCell>

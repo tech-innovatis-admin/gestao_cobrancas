@@ -58,7 +58,7 @@ const ResolverConflitoDialog = ({ receivableId, aberto, onFechar }: { receivable
 
 const LinhaQualidade = ({ i }: { i: QualityIssue }) => {
   const [aberto, setAberto] = useState(false);
-  const destino = i.receivable_id ? `/cobrancas?receivable=${i.receivable_id}` : i.project_id ? `/cobrancas?q=${encodeURIComponent(i.project_name ?? "")}&status=all` : "/auditoria?tab=qualidade";
+  const destino = i.project_id ? `/cobrancas/${i.project_id}` : "/auditoria?tab=qualidade";
   return (
     <TableRow className="clicavel">
       <TableCell><Link href={destino} className="hover:text-action">{i.project_name ?? i.issue}</Link></TableCell>

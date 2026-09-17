@@ -39,7 +39,7 @@ export interface Graficos {
   porHub: { nome: string; valor: number }[];
   porEtapa: { nome: string; valor: number }[];
   porResponsavel: { nome: string; valor: number }[];
-  top5Atraso: { projeto: string; valor: number; competencia: string; id: string }[];
+  top5Atraso: { projeto: string; valor: number; competencia: string; projectId: string }[];
   porFase: { nome: string; valor: number }[];
   carteira: { nome: string; valor: number }[];
 }
@@ -52,8 +52,8 @@ export function graficos(rows: Receivable[], p: Perspectiva): Graficos {
   const abertos = ativos.filter((r) => saldo(r, p) > 0.01);
   const comps = [...new Set(ativos.map((r) => r.competence))].sort();
   const atual = competenciaAtual();
-  const topMap = new Map<string, { projeto: string; valor: number; competencia: string; id: string }>();
-  abertos.filter((r) => r.is_overdue).forEach((r) => { const t = topMap.get(r.project_id); if (t) { t.valor += saldo(r, p); if (r.competence < t.competencia) { t.competencia = r.competence; t.id = r.id; } } else topMap.set(r.project_id, { projeto: r.project_name, valor: saldo(r, p), competencia: r.competence, id: r.id }); });
+  const topMap = new Map<string, { projeto: string; valor: number; competencia: string; projectId: string }>();
+  abertos.filter((r) => r.is_overdue).forEach((r) => { const t = topMap.get(r.project_id); if (t) { t.valor += saldo(r, p); if (r.competence < t.competencia) t.competencia = r.competence; } else topMap.set(r.project_id, { projeto: r.project_name, valor: saldo(r, p), competencia: r.competence, projectId: r.project_id }); });
   const projetos = new Map<string, Receivable>(); rows.filter((r) => r.project_active).forEach((r) => projetos.set(r.project_id, r));
   return {
     porMes: comps.map((c) => ({ mes: c, previsto: ativos.filter((r) => r.competence === c).reduce((a, r) => a + previsto(r, p), 0), recebido: ativos.filter((r) => r.competence === c).reduce((a, r) => a + recebido(r, p), 0) })),
